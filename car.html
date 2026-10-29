@@ -178,6 +178,56 @@
   body.offroad .awd { display: flex; }
   body.offroad .stat.lives { display: none; }
   .menu-sec { margin: 4px 0 -6px; }
+  .ghost-btn {
+    font: 600 13px var(--font-body); color: var(--fg); background: rgba(10, 12, 16, 0.45);
+    border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer;
+  }
+  .money {
+    font: 700 14px var(--font-display); color: #8fe3a5; background: rgba(10, 12, 16, 0.55);
+    border: 1px solid rgba(143, 227, 165, 0.35); border-radius: 999px; padding: 6px 12px;
+    font-variant-numeric: tabular-nums; text-shadow: none;
+  }
+  .model em { font-style: normal; font-size: 11px; font-weight: 700; color: var(--accent); margin-top: 2px; }
+  .model.unowned { opacity: 0.85; }
+  .model.locked em { color: var(--muted); }
+  .buybar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; padding: 8px; border: 1px dashed var(--accent); border-radius: 10px; font-size: 12px; }
+  .buybar span { flex: 1 1 100%; }
+  .chip.buy { background: #4fbf6a; border-color: #4fbf6a; color: #08130b; }
+  .chip.buy:disabled { opacity: 0.4; cursor: not-allowed; }
+  .chip.priced { border-style: dashed; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tab {
+    font: 700 13px var(--font-body); color: var(--fg); background: transparent; cursor: pointer;
+    border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px;
+  }
+  .tab[aria-selected="true"] { background: var(--accent); color: #17130a; border-color: var(--accent); }
+  .lvgrid { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; max-height: 42vh; overflow-y: auto; padding: 2px; }
+  .lvgrid.single { grid-template-columns: 1fr; max-height: none; }
+  .lv {
+    font: 700 14px var(--font-display); color: var(--fg); background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--line); border-radius: 8px; padding: 9px 0; cursor: pointer; font-variant-numeric: tabular-nums;
+  }
+  .lv:hover:not(:disabled) { border-color: var(--accent); }
+  .lv.done { background: rgba(79, 191, 106, 0.18); border-color: rgba(79, 191, 106, 0.5); }
+  .lv.next { background: var(--accent); color: #17130a; border-color: var(--accent); }
+  .lv.night:not(.next) { box-shadow: inset 0 -3px 0 #6f7cff; }
+  .lv:disabled { opacity: 0.32; cursor: not-allowed; }
+  .intro {
+    background: radial-gradient(ellipse at 50% 55%, rgba(6, 8, 12, 0.15), rgba(6, 8, 12, 0.82));
+  }
+  .intro-inner { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+  .intro-kicker { margin: 0; font-size: 12px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--accent); }
+  .intro-title {
+    margin: 0; font: 700 clamp(36px, 8vw, 84px) var(--font-display); line-height: 1; letter-spacing: -0.01em;
+    text-shadow: 0 6px 40px rgba(0, 0, 0, 0.6); text-wrap: balance;
+  }
+  .intro-money { margin: 0; font-size: 14px; color: #8fe3a5; font-variant-numeric: tabular-nums; }
+  .intro-btns { display: flex; flex-direction: column; gap: 10px; width: min(320px, 100%); margin-top: 10px; }
+  .btn.big { font-size: 17px; padding: 14px 18px; border-radius: 14px; background: rgba(18, 21, 27, 0.72); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .btn.big.primary { background: var(--accent); display: flex; flex-direction: column; gap: 2px; align-items: center; }
+  .btn.big.primary span { font-size: 12px; font-weight: 600; opacity: 0.75; }
+  .btn.ghost { border: 0; color: var(--muted); background: transparent; }
+  body.intro-on .hud, body.intro-on .hint, body.intro-on .touch { display: none; }
   .level.wide { grid-column: 1 / -1; }
   body.playing .side { display: none; }
 
@@ -255,6 +305,7 @@
 
   @media (max-width: 640px) {
     .levels { grid-template-columns: 1fr; }
+    .lvgrid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
     .stat { padding: 4px 8px; min-width: 0; }
     .stat b { font-size: 16px; }
     .top { flex-direction: column; }
@@ -275,6 +326,8 @@
     <div class="brand-row">
       <h1>Автостудія 3D</h1>
       <button class="play-btn" id="modeBtn" type="button">Грати</button>
+      <button class="ghost-btn" id="menuBtn" type="button">Меню</button>
+      <span class="money" id="moneyPill">$ 0</span>
     </div>
     <p>Камера: <span class="cam-name" id="camName">Вільна</span> · <span id="camNote">тягніть мишкою, щоб обертати</span></p>
   </div>
@@ -291,9 +344,10 @@
       <span>Гараж</span><span class="chev" aria-hidden="true">▾</span>
     </button>
     <div class="garage-body" id="garageBody">
-      <div>
-        <p class="label">Машина</p>
+      <div id="carsSection">
+        <p class="label">Машини · магазин</p>
         <div class="models" id="models"></div>
+        <div class="buybar" id="buyBar" hidden></div>
         <div class="stats" id="stats"></div>
       </div>
       <div>
@@ -301,13 +355,18 @@
         <div class="swatches" id="swatches"></div>
         <div class="swatch-name" id="swatchName"></div>
       </div>
-      <div>
+      <div id="tuneSection">
         <p class="label">Тюнінг</p>
         <div class="tuning" id="tuning"></div>
         <div class="row tune-actions">
+          <button class="chip" id="suspBtn" type="button">Перевірити підвіску</button>
           <button class="chip" id="tuneRandom" type="button">Мені пощастить</button>
           <button class="chip" id="tuneReset" type="button">Як із заводу</button>
         </div>
+      </div>
+      <div>
+        <p class="label">Причіп</p>
+        <div class="tuning" id="trailerUi"></div>
       </div>
       <div>
         <p class="label">Сцена</p>
@@ -315,6 +374,7 @@
           <button class="chip" id="tNight" type="button" aria-pressed="false">Ніч</button>
           <button class="chip" id="tLights" type="button" aria-pressed="false">Фари</button>
           <button class="chip" id="tDrive" type="button" aria-pressed="false">Рух</button>
+          <button class="chip" id="tRain" type="button" aria-pressed="false">Дощ</button>
         </div>
       </div>
     </div>
@@ -340,14 +400,31 @@
   </div>
 </div>
 
+<div class="overlay intro" id="intro" hidden>
+  <div class="intro-inner">
+    <p class="intro-kicker">гонки · тюнінг · бездоріжжя</p>
+    <h1 class="intro-title">Автостудія 3D</h1>
+    <p class="intro-money" id="introMoney"></p>
+    <div class="intro-btns">
+      <button class="btn primary big" type="button" id="iContinue">Грати далі<span id="iContinueSub"></span></button>
+      <button class="btn big" type="button" id="iLevels">Рівні</button>
+      <button class="btn big" type="button" id="iCars">Машини</button>
+      <button class="btn big" type="button" id="iTune">Тюнінг</button>
+      <button class="btn ghost" type="button" id="iStudio">Просто помилуватися машиною</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="menu" hidden>
   <div class="panel dialog" role="dialog" aria-labelledby="menuTitle">
-    <h2 id="menuTitle">Обери рівень</h2>
-    <p class="sub">Їдь шосе якомога довше: об'їжджай машини й конуси, збирай монети. Швидкість росте сама, тож розслаблятися не вийде. Машину й тюнінг обирай у гаражі: від них залежать швидкість, керованість і кількість життів.</p>
-    <p class="label menu-sec">Шосе</p>
-    <div class="levels" id="levels"></div>
-    <p class="label menu-sec">Бездоріжжя</p>
-    <div class="levels" id="offLevels"></div>
+    <h2 id="menuTitle">Рівні</h2>
+    <div class="tabs" role="tablist">
+      <button class="tab" type="button" role="tab" data-tab="hw">Шосе · 100</button>
+      <button class="tab" type="button" role="tab" data-tab="off">Бездоріжжя · 150</button>
+      <button class="tab" type="button" role="tab" data-tab="world">Відкритий світ</button>
+    </div>
+    <p class="sub" id="tabDesc"></p>
+    <div class="lvgrid" id="lvgrid"></div>
     <div class="keys">
       <span><kbd>←</kbd><kbd>→</kbd> або <kbd>A</kbd><kbd>D</kbd> кермо</span>
       <span><kbd>↑</kbd> газ</span>
@@ -356,7 +433,7 @@
       <span><kbd>P</kbd> пауза</span>
       <span><kbd>F</kbd> повний привід</span>
     </div>
-    <div class="row"><button class="btn" type="button" id="toStudio1">Назад у студію</button></div>
+    <div class="row"><button class="btn" type="button" id="toStudio1">Головне меню</button></div>
   </div>
 </div>
 
@@ -366,7 +443,8 @@
     <p class="sub">Двигун тихенько муркоче. Можна видихнути.</p>
     <div class="row">
       <button class="btn primary" type="button" id="resumeBtn">Продовжити</button>
-      <button class="btn" type="button" id="pauseMenuBtn">Інший рівень</button>
+      <button class="btn" type="button" id="pauseMenuBtn">Рівні</button>
+      <button class="btn" type="button" id="pauseHomeBtn">Головне меню</button>
     </div>
   </div>
 </div>
@@ -376,17 +454,12 @@
     <h2 id="overTitle">Аварія!</h2>
     <p class="sub" id="overQuip"></p>
     <div class="score-big" id="overScore">0</div>
-    <div class="score-row">
-      <span>Рівень: <b id="overLevel"></b></span>
-      <span><span id="ol2">Проїхано</span>: <b id="overDist"></b></span>
-      <span><span id="ol3">Монет</span>: <b id="overCoins"></b></span>
-      <span>Рекорд: <b id="overBest"></b></span>
-    </div>
-    <div class="record" id="overRecord" hidden>Новий рекорд на цьому рівні!</div>
+    <div class="score-row" id="overRows"></div>
+    <div class="record" id="overRecord" hidden></div>
     <div class="row">
       <button class="btn primary" type="button" id="againBtn">Ще раз</button>
-      <button class="btn" type="button" id="overMenuBtn">Інший рівень</button>
-      <button class="btn" type="button" id="toStudio2">У студію</button>
+      <button class="btn" type="button" id="overMenuBtn">Рівні</button>
+      <button class="btn" type="button" id="toStudio2">Головне меню</button>
     </div>
   </div>
 </div>
@@ -617,20 +690,51 @@
     { id: 'cooper', name: 'Лондонець Купер', blurb: 'у стилі MINI', stats: { speed: 3, handling: 5, armor: 2 }, paint: 'Британський зелений',
       Lf: 1.85, Lr: -1.8, bottom: 0.3, noseY: 0.58, hoodY: 0.76, cowlX: 0.8, cowlY: 0.92, beltY: 1.0, tailY: 0.98,
       rearX: -1.2, frontX: 1.22, wheelR: 0.3, archR: 0.41, width: 1.74,
-      wsTopX: 0.3, roofY: 1.42, roofRearX: -1.55, glassX: -1.78, cabinW: 1.5, rearSteep: true, seatDrop: 0, mount: 'roof', lights: 'round' }
+      wsTopX: 0.3, roofY: 1.42, roofRearX: -1.55, glassX: -1.78, cabinW: 1.5, rearSteep: true, seatDrop: 0, mount: 'roof', lights: 'round' },
+    { id: 'niva', name: 'Нива 4×4', blurb: 'у стилі Lada Niva', stats: { speed: 1, handling: 3, armor: 4 }, paint: 'Вишневий металік',
+      Lf: 1.85, Lr: -1.85, bottom: 0.45, noseY: 0.82, hoodY: 0.98, cowlX: 0.78, cowlY: 1.08, beltY: 1.14, tailY: 1.12,
+      rearX: -1.12, frontX: 1.12, wheelR: 0.38, archR: 0.5, width: 1.72,
+      wsTopX: 0.35, roofY: 1.72, roofRearX: -1.7, glassX: -1.8, cabinW: 1.5, rearSteep: true, seatDrop: 0, mount: 'roof', lights: 'round' },
+    { id: 'wrangler', name: 'Ренглер Рубікон', blurb: 'у стилі Jeep Wrangler', stats: { speed: 2, handling: 3, armor: 5 }, paint: 'Джалло',
+      Lf: 2.05, Lr: -2.05, bottom: 0.55, noseY: 1.0, hoodY: 1.12, cowlX: 0.9, cowlY: 1.18, beltY: 1.22, tailY: 1.22,
+      rearX: -1.3, frontX: 1.3, wheelR: 0.45, archR: 0.58, width: 1.9,
+      wsTopX: 0.78, roofY: 1.92, roofRearX: -1.9, glassX: -1.98, cabinW: 1.66, rearSteep: true, seatDrop: 0, mount: 'roof', grille: 'slots', lights: 'round', spare: true },
+    { id: 'defender', name: 'Лендер 110', blurb: 'у стилі Land Rover Defender', stats: { speed: 2, handling: 3, armor: 5 }, paint: 'Оливковий',
+      Lf: 2.2, Lr: -2.25, bottom: 0.52, noseY: 0.92, hoodY: 1.12, cowlX: 0.95, cowlY: 1.2, beltY: 1.28, tailY: 1.28,
+      rearX: -1.35, frontX: 1.4, wheelR: 0.42, archR: 0.54, width: 1.96,
+      wsTopX: 0.7, roofY: 1.98, roofRearX: -2.1, glassX: -2.2, cabinW: 1.72, rearSteep: true, seatDrop: 0, mount: 'roof', grille: 'slats', lights: 'round', spare: true },
+    { id: 'cruiser', name: 'Крузак 300', blurb: 'у стилі Toyota Land Cruiser', stats: { speed: 3, handling: 3, armor: 5 }, paint: 'Перламутр',
+      Lf: 2.4, Lr: -2.4, bottom: 0.5, noseY: 0.9, hoodY: 1.1, cowlX: 1.0, cowlY: 1.2, beltY: 1.26, tailY: 1.22,
+      rearX: -1.5, frontX: 1.55, wheelR: 0.43, archR: 0.55, width: 2.0,
+      wsTopX: 0.35, roofY: 1.9, roofRearX: -2.1, glassX: -2.28, cabinW: 1.7, rearSteep: true, seatDrop: 0, mount: 'roof' },
+    { id: 'hummer', name: 'Хамер H1', blurb: 'у стилі Hummer', stats: { speed: 2, handling: 2, armor: 6 }, paint: 'Пісочний',
+      Lf: 2.35, Lr: -2.35, bottom: 0.58, noseY: 0.98, hoodY: 1.18, cowlX: 0.85, cowlY: 1.24, beltY: 1.3, tailY: 1.28,
+      rearX: -1.55, frontX: 1.6, wheelR: 0.46, archR: 0.6, width: 2.25,
+      wsTopX: 0.55, roofY: 1.86, roofRearX: -1.8, glassX: -2.05, cabinW: 1.86, rearSteep: true, seatDrop: 0, mount: 'roof', grille: 'slots' },
+    { id: 'bigfoot', name: 'Монстр Бігфут', blurb: 'монстр-трак', stats: { speed: 4, handling: 2, armor: 6 }, paint: 'Россо корса', monster: true, noArch: true,
+      Lf: 2.5, Lr: -2.6, bottom: 1.25, noseY: 1.6, hoodY: 1.85, cowlX: 0.9, cowlY: 1.95, beltY: 2.05, tailY: 2.0,
+      rearX: -1.6, frontX: 1.6, wheelR: 0.85, archR: 0.9, width: 1.95, track: 1.32,
+      wsTopX: 0.3, roofY: 2.6, roofRearX: -0.9, glassX: -1.0, cabinW: 1.7, rearSteep: true, seatDrop: 0, mount: 'deck', grille: 'slats', lights: 'round' },
+    { id: 'grom', name: 'Монстр Грім', blurb: 'монстр-трак', stats: { speed: 5, handling: 2, armor: 6 }, paint: 'Французький синій', monster: true, noArch: true,
+      Lf: 2.4, Lr: -2.4, bottom: 1.3, noseY: 1.55, hoodY: 1.75, cowlX: 0.6, cowlY: 1.85, beltY: 2.0, tailY: 1.95,
+      rearX: -1.55, frontX: 1.55, wheelR: 0.9, archR: 0.9, width: 1.9, track: 1.35,
+      wsTopX: -0.2, roofY: 2.45, roofRearX: -0.8, glassX: -1.9, cabinW: 1.6, rearSteep: false, seatDrop: 0, mount: 'deck', grille: 'intake' }
   ];
+  const PRICES = { gt: 0, super: 6000, hatch: 1500, suv: 4000, rosso: 15000, toro: 20000, noir: 24000, grand: 16000, bavar: 9000, n911: 13000, gwagen: 12000, cooper: 3000,
+    niva: 2500, wrangler: 8000, defender: 9000, cruiser: 11000, hummer: 14000, bigfoot: 25000, grom: 30000 };
   MODELS.forEach(s => {
     s.grille = s.grille || 'std';
     s.lights = s.lights || 'strip';
     s.roofCut = s.roofY - 0.015;
-    s.track = s.width / 2 - 0.13;
+    s.track = s.track || s.width / 2 - 0.13;
+    s.price = PRICES[s.id] || 0;
     s.tubY = Math.max(s.beltY, s.cowlY) + 0.065 - s.seatDrop;
     s.seatX = s.cowlX - 1.43;
     s.steerZ = -s.cabinW * 0.24;
     s.eye = new THREE.Vector3(s.seatX - 0.05, s.tubY + 0.215, s.steerZ);
     s.headY = (s.noseY + s.hoodY) / 2 + 0.05;
     s.hl = (s.Lf - s.Lr) / 2 - 0.1;
-    s.hw = s.width / 2 - 0.06;
+    s.hw = Math.max(s.width / 2, s.track + 0.125 * s.wheelR / 0.345) - 0.06;
   });
 
   const TUNING = [
@@ -673,10 +777,12 @@
     const b = s.bottom, Y = s.wheelR;
     const lower = new THREE.Shape();
     lower.moveTo(s.Lr + 0.08, b);
-    lower.lineTo(s.rearX - s.archR, b);
-    lower.absarc(s.rearX, Y, s.archR, Math.PI, 0, true);
-    lower.lineTo(s.frontX - s.archR, b);
-    lower.absarc(s.frontX, Y, s.archR, Math.PI, 0, true);
+    if (!s.noArch) {
+      lower.lineTo(s.rearX - s.archR, b);
+      lower.absarc(s.rearX, Y, s.archR, Math.PI, 0, true);
+      lower.lineTo(s.frontX - s.archR, b);
+      lower.absarc(s.frontX, Y, s.archR, Math.PI, 0, true);
+    }
     lower.lineTo(s.Lf - 0.12, b);
     lower.quadraticCurveTo(s.Lf + 0.02, b + 0.08, s.Lf, s.noseY);
     lower.quadraticCurveTo(s.Lf - 0.04, s.hoodY - 0.05, s.Lf - 0.26, s.hoodY);
@@ -844,7 +950,22 @@
       });
     });
     add(box(0.06, 0.03, s.width - 1.2), tailMat, s.Lr - 0.05, s.tailY - 0.08, 0, s.rearSteep ? -0.08 : -0.3);
-    addGrille(s, add, box);
+    addGrille(s, add, box, m);
+    if (s.monster) {
+      // chassis rails and long-travel shocks down to each hub
+      [-1, 1].forEach(side => add(box(s.Lf - s.Lr - 0.6, 0.18, 0.16), blackGloss, (s.Lf + s.Lr) / 2, s.bottom - 0.12, side * 0.62));
+      [s.rearX, s.frontX].forEach(x => [-1, 1].forEach(side => {
+        const a = new THREE.Vector3(x, s.wheelR, side * (s.track - 0.4)), b2 = new THREE.Vector3(x - 0.15, s.bottom + 0.05, side * (s.width / 2 - 0.15));
+        const len = a.distanceTo(b2);
+        const shock = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, len, 12), shockMat);
+        shock.position.copy(a).add(b2).multiplyScalar(0.5);
+        shock.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), b2.clone().sub(a).normalize());
+        body.add(shock);
+        const arm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, s.track - 0.5), blackGloss);
+        arm.position.set(x, s.wheelR, side * (s.track - 0.5) / 2 + side * 0.1);
+        body.add(arm);
+      }));
+    }
     if (s.spare) {
       const spare = new THREE.Mesh(tireGeo, rubber);
       spare.scale.setScalar(s.wheelR / 0.345);
@@ -963,7 +1084,8 @@
   const roundLampGeo = keep(new THREE.CylinderGeometry(0.12, 0.12, 0.1, 28));
   const roundLensGeo = keep(new THREE.CylinderGeometry(0.1, 0.1, 0.02, 28));
 
-  function addGrille(s, add, box) {
+  const shockMat = new THREE.MeshStandardMaterial({ color: 0xf2c230, metalness: 0.6, roughness: 0.3 });
+  function addGrille(s, add, box, m) {
     const x = s.Lf + 0.01, y = s.noseY - 0.04;
     switch (s.grille) {
       case 'kidney':
@@ -987,6 +1109,10 @@
         add(box(0.08, 0.3, 1.0), blackGloss, x, y, 0);
         for (let i = -1; i <= 1; i++) add(box(0.09, 0.02, 0.98), chrome, x + 0.01, y + i * 0.08, 0);
         break;
+      case 'slots':
+        add(box(0.08, 0.34, 0.95), m.paint, x, y, 0);
+        for (let i = -3; i <= 3; i++) add(box(0.09, 0.26, 0.07), blackGloss, x + 0.01, y, i * 0.13);
+        break;
       case 'intake':
         add(box(0.12, 0.12, s.width * 0.8), blackGloss, s.Lf - 0.05, s.bottom + 0.09, 0);
         break;
@@ -1006,7 +1132,7 @@
   let wheels = [];
   let heroBuild = null;
   let heroRide = 0;
-  const garage = { model: 'gt', paint: 0, tuning: { ...STOCK_TUNING } };
+  const garage = { model: 'gt', paint: 0, tuning: { ...STOCK_TUNING }, preview: null };
   try {
     const saved = JSON.parse(localStorage.getItem('car-garage') || 'null');
     if (saved && MODELS.some(mm => mm.id === saved.model)) {
@@ -1015,8 +1141,30 @@
       TUNING.forEach(g => { if (saved.tuning && g.opts.some(o => o[0] === saved.tuning[g.key])) garage.tuning[g.key] = saved.tuning[g.key]; });
     }
   } catch (e) { /* storage blocked or corrupt: start stock */ }
-  function saveGarage() { try { localStorage.setItem('car-garage', JSON.stringify(garage)); } catch (e) { /* ignore */ } }
-  const heroModel = () => MODELS.find(mm => mm.id === garage.model);
+  function saveGarage() { try { localStorage.setItem('car-garage', JSON.stringify({ model: garage.model, paint: garage.paint, tuning: garage.tuning })); } catch (e) { /* ignore */ } }
+  const heroModel = () => MODELS.find(mm => mm.id === (garage.preview || garage.model));
+
+  // ---------- Money, purchases and progress ----------
+  const TUNE_PRICES = {
+    spoiler: { lip: 200, wing: 500, big: 900 }, rims: { five: 250, turbine: 400, deep: 350 }, rimColor: { black: 100, gold: 300, bronze: 200 },
+    ride: { low: 250, high: 300 }, kit: { sport: 600 }, exhaust: { sport: 350 }, scoop: { on: 300 },
+    neon: { blue: 400, pink: 400, green: 400 }, tint: { dark: 150, mirror: 250 }, caliper: { yellow: 120, blue: 120, green: 120 }
+  };
+  const TRAILER_PRICE = 3000;
+  const SAVE_KEY = 'car-save-v1';
+  const save = { money: 1000, owned: ['gt'], tune: [], hw: 0, off: 0, trailer: false, trailerOn: false, trailerCar: '', lastMode: 'highway' };
+  try { const sv = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (sv) Object.assign(save, sv); } catch (e) { /* fresh start */ }
+  // whatever was already chosen before the shop existed stays yours
+  if (!save.owned.includes(garage.model)) save.owned.push(garage.model);
+  TUNING.forEach(g => { const v = garage.tuning[g.key]; if ((TUNE_PRICES[g.key] || {})[v] && !save.tune.includes(g.key + ':' + v)) save.tune.push(g.key + ':' + v); });
+  const fmt = n => Math.floor(n).toLocaleString('uk-UA');
+  const cleared = () => save.hw + save.off;
+  const monsterOpen = () => cleared() >= 100;
+  function persist() {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* storage blocked */ }
+    const pill = document.getElementById('moneyPill');
+    if (pill) pill.textContent = '$ ' + fmt(save.money);
+  }
 
   const neonTex = (() => {
     const c = document.createElement('canvas');
@@ -1103,7 +1251,9 @@
     { name: 'Французький синій', hex: 0x1b3f8f, metal: 0.65, rough: 0.28 },
     { name: 'Британський зелений', hex: 0x0f3b2c, metal: 0.6, rough: 0.3 },
     { name: 'Баварський синій', hex: 0x1f4fb3, metal: 0.65, rough: 0.28 },
-    { name: 'Срібний арктик', hex: 0xb8bcc2, metal: 0.85, rough: 0.25 }
+    { name: 'Срібний арктик', hex: 0xb8bcc2, metal: 0.85, rough: 0.25 },
+    { name: 'Оливковий', hex: 0x4b5a3a, metal: 0.3, rough: 0.45 },
+    { name: 'Пісочний', hex: 0xb59a6a, metal: 0.3, rough: 0.45 }
   ];
   const swWrap = document.getElementById('swatches');
   const swName = document.getElementById('swatchName');
@@ -1135,7 +1285,7 @@
   function frameView() {
     const w = window.innerWidth, h = window.innerHeight;
     const panelOpen = !document.getElementById('garageBody').hidden;
-    const covered = panelOpen && w > 640 && !document.body.classList.contains('playing');
+    const covered = panelOpen && w > 640 && !document.body.classList.contains('playing') && !document.body.classList.contains('intro-on');
     if (covered) camera.setViewOffset(w, h, 150, 0, w, h);
     else camera.clearViewOffset();
     camera.updateProjectionMatrix();
@@ -1149,19 +1299,56 @@
   function renderGarage() {
     modelsEl.innerHTML = '';
     MODELS.forEach(mm => {
+      const owned = save.owned.includes(mm.id);
+      const locked = mm.monster && !monsterOpen();
       const b = document.createElement('button');
       b.type = 'button';
-      b.className = 'model';
-      b.setAttribute('aria-pressed', String(mm.id === garage.model));
-      b.innerHTML = `<b>${mm.name}</b><span>${mm.blurb}</span>`;
+      b.className = 'model' + (owned ? '' : ' unowned') + (locked ? ' locked' : '');
+      b.setAttribute('aria-pressed', String(mm.id === (garage.preview || garage.model)));
+      const tag = owned ? (mm.id === garage.model ? 'ваша' : 'у гаражі') : locked ? `після 100 рівнів` : `$ ${fmt(mm.price)}`;
+      b.innerHTML = `<b>${mm.name}</b><span>${mm.blurb}</span><em>${tag}</em>`;
       b.addEventListener('click', () => {
-        garage.model = mm.id;
         const sig = PAINTS.findIndex(pp => pp.name === mm.paint);
-        if (sig >= 0) { garage.paint = sig; applyPaint(PAINTS[sig]); }
-        saveGarage(); rebuildHero(); renderGarage();
+        if (owned) {
+          garage.model = mm.id;
+          garage.preview = null;
+          if (sig >= 0) garage.paint = sig;
+          applyPaint(PAINTS[garage.paint] || PAINTS[0]);
+          saveGarage();
+        } else {
+          garage.preview = mm.id;
+          if (sig >= 0) applyPaint(PAINTS[sig]);
+        }
+        rebuildHero(); renderGarage();
       });
       modelsEl.appendChild(b);
     });
+    const buy = document.getElementById('buyBar');
+    const pm = garage.preview && MODELS.find(mm => mm.id === garage.preview);
+    if (pm) {
+      const locked = pm.monster && !monsterOpen();
+      const can = save.money >= pm.price;
+      buy.hidden = false;
+      buy.innerHTML = locked
+        ? `<span>${pm.name} відкриється після 100 пройдених рівнів. Пройдено ${cleared()}.</span><button class="chip" type="button" data-act="cancel">Назад</button>`
+        : `<span>${pm.name}: $ ${fmt(pm.price)}${can ? '' : ` · не вистачає $ ${fmt(pm.price - save.money)}`}</span>
+           <button class="chip buy" type="button" data-act="buy" ${can ? '' : 'disabled'}>Купити</button><button class="chip" type="button" data-act="cancel">Назад</button>`;
+      buy.querySelectorAll('button').forEach(btn => btn.addEventListener('click', () => {
+        if (btn.dataset.act === 'buy' && save.money >= pm.price) {
+          save.money -= pm.price;
+          save.owned.push(pm.id);
+          garage.model = pm.id;
+          const sig = PAINTS.findIndex(pp => pp.name === pm.paint);
+          if (sig >= 0) garage.paint = sig;
+          persist(); saveGarage();
+          toast(`${pm.name} тепер ваша!`);
+        } else {
+          applyPaint(PAINTS[garage.paint] || PAINTS[0]);
+        }
+        garage.preview = null;
+        rebuildHero(); renderGarage();
+      }));
+    } else buy.hidden = true;
     const st = computeStats(heroModel(), garage.tuning);
     statsEl.innerHTML = STAT_LABELS.map(([k, label]) =>
       `<div class="stat-row"><span>${label}</span><div class="bars" aria-label="${label}: ${st[k]} з 6">${[1, 2, 3, 4, 5, 6].map(i => `<i class="${i <= st[k] ? 'on' : ''}"></i>`).join('')}</div></div>`
@@ -1174,26 +1361,91 @@
       const row = document.createElement('div');
       row.className = 'toggles';
       g.opts.forEach(([val, label]) => {
+        const price = (TUNE_PRICES[g.key] || {})[val] || 0;
+        const own = !price || save.tune.includes(g.key + ':' + val);
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = 'chip';
-        b.textContent = label;
+        b.className = 'chip' + (own ? '' : ' priced');
+        b.textContent = own ? label : `${label} · $${fmt(price)}`;
         b.setAttribute('aria-pressed', String(garage.tuning[g.key] === val));
-        b.addEventListener('click', () => { garage.tuning[g.key] = val; saveGarage(); rebuildHero(); renderGarage(); });
+        b.addEventListener('click', () => {
+          if (!own) {
+            if (save.money < price) { toast(`Не вистачає $ ${fmt(price - save.money)}`); return; }
+            save.money -= price;
+            save.tune.push(g.key + ':' + val);
+            persist();
+            toast(`Куплено: ${label} (−$ ${fmt(price)})`);
+          }
+          garage.tuning[g.key] = val; saveGarage(); rebuildHero(); renderGarage();
+        });
         row.appendChild(b);
       });
       wrap.appendChild(row);
       tuningEl.appendChild(wrap);
     });
+    renderTrailerUi();
+    persist();
   }
-  renderGarage();
+  function renderTrailerUi() {
+    const box = document.getElementById('trailerUi');
+    box.innerHTML = '';
+    if (!save.trailer) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip priced';
+      b.textContent = `Купити причіп · $${fmt(TRAILER_PRICE)}`;
+      b.addEventListener('click', () => {
+        if (save.money < TRAILER_PRICE) { toast(`Не вистачає $ ${fmt(TRAILER_PRICE - save.money)}`); return; }
+        save.money -= TRAILER_PRICE; save.trailer = true; save.trailerOn = true;
+        persist(); toast('Причіп куплено! Завантажте на нього машину'); renderGarage();
+      });
+      box.appendChild(b);
+      return;
+    }
+    const row = document.createElement('div');
+    row.className = 'toggles';
+    [[false, 'Без причепа'], [true, 'З причепом']].forEach(([v, label]) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip'; b.textContent = label;
+      b.setAttribute('aria-pressed', String(save.trailerOn === v));
+      b.addEventListener('click', () => { save.trailerOn = v; persist(); renderGarage(); });
+      row.appendChild(b);
+    });
+    box.appendChild(row);
+    if (heroModel().monster) {
+      const note = document.createElement('p');
+      note.className = 'stat-note';
+      note.textContent = 'Монстр-трак причіп не тягне: зачіпка надто високо.';
+      box.appendChild(note);
+    }
+    const lab = document.createElement('span');
+    lab.className = 'tune-label';
+    lab.textContent = 'Вантаж на причепі';
+    box.appendChild(lab);
+    const cargo = document.createElement('div');
+    cargo.className = 'toggles';
+    const choices = [['', 'Порожній']].concat(save.owned.filter(id => id !== garage.model).map(id => MODELS.find(m => m.id === id)).filter(m => m && !m.monster).map(m => [m.id, m.name]));
+    choices.forEach(([id, label]) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip'; b.textContent = label;
+      b.setAttribute('aria-pressed', String(save.trailerCar === id));
+      b.addEventListener('click', () => { save.trailerCar = id; persist(); setTrailerCargo(id); renderGarage(); });
+      cargo.appendChild(b);
+    });
+    box.appendChild(cargo);
+  }
+  setTimeout(() => setTrailerCargo(save.trailerCar), 0);
   document.getElementById('tuneReset').addEventListener('click', () => {
     garage.tuning = { ...STOCK_TUNING }; saveGarage(); rebuildHero(); renderGarage();
   });
   document.getElementById('tuneRandom').addEventListener('click', () => {
-    TUNING.forEach(g => (garage.tuning[g.key] = g.opts[Math.floor(Math.random() * g.opts.length)][0]));
+    TUNING.forEach(g => {
+      const own = g.opts.filter(([v]) => !((TUNE_PRICES[g.key] || {})[v]) || save.tune.includes(g.key + ':' + v));
+      garage.tuning[g.key] = own[Math.floor(Math.random() * own.length)][0];
+    });
     saveGarage(); rebuildHero(); renderGarage();
   });
+  document.getElementById('suspBtn').addEventListener('click', e => { e.currentTarget.blur(); startSuspTest(); });
   const garageToggle = document.getElementById('garageToggle');
   const garageBody = document.getElementById('garageBody');
   function setGarageOpen(open) {
@@ -1329,172 +1581,348 @@
 
   const game = {
     kind: 'highway', level: null, running: false, paused: false, speed: 0, dist: 0, coins: 0, lives: 0,
-    z: 0, vz: 0, steer: 0, invuln: 0, shake: 0, nextRow: 0, items: []
+    z: 0, vz: 0, steer: 0, invuln: 0, shake: 0, nextRow: 0, items: [], heading: 0, up: new THREE.Vector3(0, 1, 0)
   };
 
-  // ---------- Off-road map ----------
-  // Hills, forest and mud pools. Mud deeper than a car's ground clearance traps it;
-  // 4×4 gets a high car through, a low sports car stays stuck whatever you press.
-  const OFF = { built: false, group: new THREE.Group(), trees: [], flagObjs: [], parts: null };
+  // ---------- Shared helpers for the free-drive maps ----------
+  const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  function mulberry32(a) {
+    return () => {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const srgb = hex => new THREE.Color(hex).convertSRGBToLinear();
+  function disposeGroup(g) {
+    g.traverse(o => {
+      if (o.geometry && !o.geometry.userData.keep) o.geometry.dispose();
+      if (o.material && o.material.userData && o.material.userData.own) o.material.dispose();
+    });
+    while (g.children.length) g.remove(g.children[0]);
+  }
+  const treeTrunkGeo = keep(new THREE.CylinderGeometry(0.16, 0.24, 1.8, 8));
+  const treeCrownGeo = keep(new THREE.ConeGeometry(1.5, 4, 9));
+  const rockGeo = keep(new THREE.DodecahedronGeometry(0.8, 0));
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5a3f28, roughness: 0.9 });
+  const crownMat = new THREE.MeshStandardMaterial({ roughness: 0.85 });
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0x7d7a74, roughness: 0.9, flatShading: true });
+  const waterMat = new THREE.MeshStandardMaterial({ color: srgb(0x2c5a6e), roughness: 0.08, metalness: 0.2, transparent: true, opacity: 0.82 });
+  const mudMat = new THREE.MeshStandardMaterial({ color: srgb(0x3a2717), roughness: 0.18, metalness: 0.05 });
+
+  // instanced forest from a list of {x, z, rock, s}; returns circle colliders
+  function plantForest(group, spots, hFn) {
+    const colliders = [];
+    const trees = spots.filter(p => !p.rock), rocks = spots.filter(p => p.rock);
+    const trunk = new THREE.InstancedMesh(treeTrunkGeo, trunkMat, Math.max(1, trees.length));
+    const crown = new THREE.InstancedMesh(treeCrownGeo, crownMat, Math.max(1, trees.length));
+    const rock = new THREE.InstancedMesh(rockGeo, rockMat, Math.max(1, rocks.length));
+    trunk.count = crown.count = trees.length;
+    rock.count = rocks.length;
+    const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), ps = new THREE.Vector3(), c = new THREE.Color();
+    trees.forEach((t, i) => {
+      const y = hFn(t.x, t.z);
+      mtx.compose(ps.set(t.x, y + 0.9 * t.s, t.z), q.identity(), sc.set(t.s, t.s, t.s));
+      trunk.setMatrixAt(i, mtx);
+      mtx.compose(ps.set(t.x, y + 3.7 * t.s, t.z), q.identity(), sc.set(t.s, t.s, t.s));
+      crown.setMatrixAt(i, mtx);
+      crown.setColorAt(i, c.setHSL(0.27 + Math.random() * 0.06, 0.5, 0.16 + Math.random() * 0.08).convertSRGBToLinear());
+      colliders.push({ x: t.x, z: t.z, r: 0.45 * t.s });
+    });
+    rocks.forEach((t, i) => {
+      mtx.compose(ps.set(t.x, hFn(t.x, t.z) + 0.2, t.z), q.setFromEuler(new THREE.Euler(Math.random(), Math.random() * 6, Math.random())), sc.set(t.s * 1.3, t.s * 0.8, t.s));
+      rock.setMatrixAt(i, mtx);
+      colliders.push({ x: t.x, z: t.z, r: 0.9 * t.s });
+    });
+    [trunk, crown, rock].forEach(im => { im.castShadow = true; im.receiveShadow = true; group.add(im); });
+    return colliders;
+  }
+
+  // terrain mesh coloured per vertex by a callback
+  function terrainMesh(w, d, segW, segD, hFn, colorFn, cx = 0, cz = 0) {
+    const geo = new THREE.PlaneGeometry(w, d, segW, segD);
+    geo.rotateX(-Math.PI / 2);
+    geo.translate(cx, 0, cz);
+    const pos = geo.attributes.position;
+    const colors = new Float32Array(pos.count * 3);
+    const c = new THREE.Color();
+    const cols = segW + 1, rows = segD + 1, cell = w / segW;
+    for (let i = 0; i < pos.count; i++) pos.setY(i, hFn(pos.getX(i), pos.getZ(i)));
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), z = pos.getZ(i), y = pos.getY(i);
+      const col = i % cols, row = (i / cols) | 0;
+      const sx = col > 0 && col < cols - 1 ? Math.abs(pos.getY(i + 1) - pos.getY(i - 1)) : 0;
+      const sz = row > 0 && row < rows - 1 ? Math.abs(pos.getY(i + cols) - pos.getY(i - cols)) : 0;
+      colorFn(x, z, y, c, (sx + sz) / cell);
+      c.convertSRGBToLinear();
+      colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geo.computeVertexNormals();
+    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 });
+    mat.userData.own = true;
+    const m = new THREE.Mesh(geo, mat);
+    m.receiveShadow = true;
+    return m;
+  }
+
+  // a ribbon of water that follows a centre line
+  function riverRibbon(r, hSurface, from, to) {
+    const pts = [];
+    for (let s = from; s <= to; s += 2) pts.push(s);
+    const geo = new THREE.BufferGeometry();
+    const verts = new Float32Array(pts.length * 2 * 3);
+    const idx = [];
+    pts.forEach((s, i) => {
+      const [cx, cz] = riverCenter(r, s);
+      const y = hSurface(r, s);
+      const hw = r.w / 2 + 1.2;
+      verts.set([cx + r.px * hw, y, cz + r.pz * hw, cx - r.px * hw, y, cz - r.pz * hw], i * 6);
+      if (i) { const a = (i - 1) * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    });
+    geo.setAttribute('position', new THREE.BufferAttribute(verts, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    const m = new THREE.Mesh(geo, waterMat);
+    m.receiveShadow = true;
+    return m;
+  }
+  function riverCenter(r, s) {
+    const off = r.A * Math.sin(s * r.f + r.ph);
+    return [r.x0 + r.dx * s + r.px * off, r.z0 + r.dz * s + r.pz * off];
+  }
+  // lateral offset of a point from the river centre line
+  function riverLat(r, x, z) {
+    const rx = x - r.x0, rz = z - r.z0;
+    const s = rx * r.dx + rz * r.dz;
+    const lat = rx * r.px + rz * r.pz - r.A * Math.sin(s * r.f + r.ph);
+    return { s, lat };
+  }
+
+  // ---------- Off-road levels (procedural) ----------
+  const OFF = { group: new THREE.Group(), level: 0, cfg: null, colliders: [], flagObjs: [], arrow: null, parts: null };
   OFF.group.visible = false;
   scene.add(OFF.group);
-  const OFF_LIMIT = 106;
-  const OFF_ROUTE = [[38, 12], [72, -26], [46, -70], [-8, -62], [-52, -24], [-36, 38], [8, 72], [2, 14]];
-  const OFF_POOLS = [
-    { x: 56, z: -6, r: 11, d: 0.45 }, { x: 60, z: -48, r: 8, d: 0.28 }, { x: 19, z: -66, r: 10, d: 0.48 },
-    { x: -30, z: -43, r: 9, d: 0.3 }, { x: -45, z: 7, r: 12, d: 0.5 }, { x: -14, z: 55, r: 9, d: 0.35 }, { x: 5, z: 43, r: 8, d: 0.46 }
-  ];
-  const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-  function offBase(x, z) {
-    const h = 2.6 * Math.sin(x * 0.035 + 0.6) * Math.cos(z * 0.04) + 1.4 * Math.sin(x * 0.08 + 1.3) * Math.sin(z * 0.065 + 0.4) + 0.5 * Math.sin(x * 0.19) * Math.cos(z * 0.23);
-    return h * smoothstep(4, 16, Math.hypot(x, z));
-  }
-  OFF_POOLS.forEach(p => { p.floor = offBase(p.x, p.z) - p.d * 0.7; p.surface = p.floor + p.d * 0.75; });
-  function offH(x, z) {
-    let h = offBase(x, z);
-    for (const p of OFF_POOLS) {
-      const d = Math.hypot(x - p.x, z - p.z);
-      if (d < p.r * 1.4) h += (p.floor - h) * (1 - smoothstep(p.r * 0.75, p.r * 1.4, d));
+  const OFF_LIMIT = 112;
+  const OFF_COUNT = 150;
+
+  function offConfig(n) {
+    const R = mulberry32(n * 7919 + 13);
+    const k = (n - 1) / (OFF_COUNT - 1);
+    const flags = Math.min(10, 3 + Math.floor(n / 15));
+    const route = [];
+    let x = 0, z = 0, ang = R() * Math.PI * 2;
+    for (let i = 0; i < flags; i++) {
+      ang += (R() - 0.5) * 1.6;
+      let step = 30 + R() * 14;
+      let nx = x + Math.cos(ang) * step, nz = z - Math.sin(ang) * step;
+      if (Math.abs(nx) > 82 || Math.abs(nz) > 82) {
+        ang = Math.atan2(z, -x) + (R() - 0.5) * 0.8;
+        nx = x + Math.cos(ang) * step; nz = z - Math.sin(ang) * step;
+      }
+      route.push([nx, nz]);
+      x = nx; z = nz;
     }
+    const pools = [];
+    const nPools = Math.min(12, 2 + Math.floor(n / 8));
+    for (let i = 0; i < nPools; i++) {
+      const si = Math.floor(R() * route.length);
+      const [ax, az] = si ? route[si - 1] : [0, 0];
+      const [bx, bz] = route[si];
+      const t = 0.35 + R() * 0.3;
+      pools.push({ x: ax + (bx - ax) * t + (R() - 0.5) * 6, z: az + (bz - az) * t + (R() - 0.5) * 6, r: 6 + R() * 6, d: Math.min(0.62, 0.2 + R() * (0.15 + k * 0.35)) });
+    }
+    const rivers = [];
+    const nRivers = n >= 4 ? (n >= 60 ? 2 : 1) : 0;
+    for (let i = 0; i < nRivers; i++) {
+      const si = Math.floor(R() * route.length);
+      const [ax, az] = si ? route[si - 1] : [0, 0];
+      const [bx, bz] = route[si];
+      const a = R() * Math.PI;
+      const dx = Math.cos(a), dz = Math.sin(a);
+      rivers.push({ x0: (ax + bx) / 2, z0: (az + bz) / 2, dx, dz, px: -dz, pz: dx, A: 4 + R() * 8, f: 0.03 + R() * 0.03, ph: R() * 6, w: 7 + R() * 5, deep: 0.9 + k * 0.9, shallow: 0.32 });
+    }
+    const peaks = [];
+    const nPeaks = n >= 12 ? 1 + Math.floor(k * 4) : 0;
+    for (let i = 0; i < nPeaks; i++) peaks.push({ x: (R() - 0.5) * 150, z: (R() - 0.5) * 150, h: 5 + k * 10 + R() * 4, r: 14 + R() * 10 });
+    return {
+      n, route, pools, rivers, peaks,
+      amp: 1.4 + k * 3, ph1: R() * 6, ph2: R() * 6,
+      treeCount: Math.round(140 + k * 90),
+      timeLimit: Math.round(flags * 36 + 45 + nPools * 3 + nRivers * 10),
+      rain: n % 6 === 0, night: n % 15 === 0,
+      reward: 120 + n * 12,
+      seed: n
+    };
+  }
+
+  function offBase(x, z) {
+    const C = OFF.cfg;
+    const a = C.amp;
+    let h = a * Math.sin(x * 0.035 + C.ph1) * Math.cos(z * 0.04 + C.ph2) + a * 0.55 * Math.sin(x * 0.08 + 1.3) * Math.sin(z * 0.065 + 0.4) + 0.5 * Math.sin(x * 0.19) * Math.cos(z * 0.23);
+    for (const p of C.peaks) h += p.h * Math.exp(-((x - p.x) ** 2 + (z - p.z) ** 2) / (p.r * p.r));
+    h *= smoothstep(4, 16, Math.hypot(x, z));
+    const e = Math.max(Math.abs(x), Math.abs(z));
+    h += smoothstep(92, 122, e) * (18 + 8 * Math.sin(x * 0.05) * Math.cos(z * 0.06));
     return h;
   }
-  function mudAt(x, z) {
-    for (const p of OFF_POOLS) if (Math.hypot(x - p.x, z - p.z) < p.r * 0.85) return p;
-    return null;
-  }
-  function distToRoute(x, z) {
+  function offDistToRoute(x, z) {
     let best = Infinity, px = 0, pz = 0;
-    for (const [qx, qz] of OFF_ROUTE) {
-      const dx = qx - px, dz = qz - pz, len2 = dx * dx + dz * dz;
+    for (const [qx, qz] of OFF.cfg.route) {
+      const dx = qx - px, dz = qz - pz, len2 = dx * dx + dz * dz || 1;
       const t = Math.max(0, Math.min(1, ((x - px) * dx + (z - pz) * dz) / len2));
       best = Math.min(best, Math.hypot(x - (px + dx * t), z - (pz + dz * t)));
       px = qx; pz = qz;
     }
     return best;
   }
+  const offRiverSurface = (r, s) => { const [cx, cz] = riverCenter(r, s); return offBase(cx, cz) - 0.35; };
+  function offRiverDepth(r, lat, x, z) {
+    const half = r.w / 2;
+    if (Math.abs(lat) >= half) return 0;
+    const ford = smoothstep(4, 10, offDistToRoute(x, z));
+    const deep = r.shallow + (r.deep - r.shallow) * ford;
+    return deep * (1 - (lat / half) ** 2) + 0.05;
+  }
+  function offH(x, z) {
+    const C = OFF.cfg;
+    let h = offBase(x, z);
+    for (const p of C.pools) {
+      const d = Math.hypot(x - p.x, z - p.z);
+      if (d < p.r * 1.4) h += (p.floor - h) * (1 - smoothstep(p.r * 0.75, p.r * 1.4, d));
+    }
+    for (const r of C.rivers) {
+      const { s, lat } = riverLat(r, x, z);
+      const band = r.w / 2 + 4;
+      if (Math.abs(lat) < band) {
+        const surf = offRiverSurface(r, s);
+        const floorY = surf - offRiverDepth(r, lat, x, z);
+        const bank = Math.min(h, surf + 0.25);
+        const w = 1 - smoothstep(r.w / 2, band, Math.abs(lat));
+        h = h + (Math.min(bank, floorY) - h) * w;
+      }
+    }
+    return h;
+  }
+  // what the wheels are in: mud pool or river water
+  function offSurf(x, z) {
+    const C = OFF.cfg;
+    for (const p of C.pools) if (Math.hypot(x - p.x, z - p.z) < p.r * 0.85) return { type: 'mud', d: p.d, surface: p.surface };
+    for (const r of C.rivers) {
+      const { s, lat } = riverLat(r, x, z);
+      if (Math.abs(lat) < r.w / 2) {
+        const d = offRiverDepth(r, lat, x, z);
+        if (d > 0.12) return { type: 'water', d, surface: offRiverSurface(r, s) };
+      }
+    }
+    return null;
+  }
 
-  function buildOffroad() {
-    if (OFF.built) return;
-    OFF.built = true;
+  function buildOffLevel(n) {
+    OFF.level = n;
+    const C = OFF.cfg = offConfig(n);
+    C.pools.forEach(p => { p.floor = offBase(p.x, p.z) - p.d * 0.7; p.surface = p.floor + p.d * 0.75; });
+    disposeGroup(OFF.group);
     const g = OFF.group;
-    // terrain with grass, a dirt track along the route and muddy banks
-    const geo = new THREE.PlaneGeometry(240, 240, 180, 180);
-    geo.rotateX(-Math.PI / 2);
-    const pos = geo.attributes.position;
-    const colors = new Float32Array(pos.count * 3);
-    const grassA = new THREE.Color(0x4f6e2c), grassB = new THREE.Color(0x6b8238), dirt = new THREE.Color(0x7a5e3c), mudC = new THREE.Color(0x4a3524);
-    const c = new THREE.Color();
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i), z = pos.getZ(i);
-      pos.setY(i, offH(x, z));
+    const grassA = new THREE.Color(0x4f6e2c), grassB = new THREE.Color(0x6b8238), dirt = new THREE.Color(0x7a5e3c), mudC = new THREE.Color(0x4a3524), rockC = new THREE.Color(0x77736c), snow = new THREE.Color(0xf2f4f6);
+    g.add(terrainMesh(260, 260, 190, 190, offH, (x, z, y, c, slope) => {
       c.copy(grassA).lerp(grassB, 0.5 + 0.5 * Math.sin(x * 0.13) * Math.cos(z * 0.11));
-      const track = 1 - smoothstep(1.8, 4.2, distToRoute(x, z));
-      c.lerp(dirt, track * 0.85);
-      for (const p of OFF_POOLS) {
+      c.lerp(dirt, (1 - smoothstep(1.8, 4.2, offDistToRoute(x, z))) * 0.85);
+      for (const p of C.pools) {
         const d = Math.hypot(x - p.x, z - p.z);
         if (d < p.r * 1.5) c.lerp(mudC, 1 - smoothstep(p.r * 0.8, p.r * 1.5, d));
       }
-      c.convertSRGBToLinear();
-      colors[i * 3] = c.r; colors[i * 3 + 1] = c.g; colors[i * 3 + 2] = c.b;
-    }
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    geo.computeVertexNormals();
-    const terrain = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 }));
-    terrain.receiveShadow = true;
-    g.add(terrain);
-
-    // wet mud: glossy surface over each pool floor
-    const mudMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(0x3a2717).convertSRGBToLinear(), roughness: 0.18, metalness: 0.05 });
-    OFF_POOLS.forEach(p => {
+      c.lerp(rockC, smoothstep(0.9, 2.2, slope));
+      c.lerp(snow, smoothstep(9, 13, y));
+    }));
+    C.pools.forEach(p => {
       const m = new THREE.Mesh(new THREE.CircleGeometry(p.r * 0.98, 48), mudMat);
       m.rotation.x = -Math.PI / 2;
       m.position.set(p.x, p.surface, p.z);
       m.receiveShadow = true;
       g.add(m);
     });
+    C.rivers.forEach(r => g.add(riverRibbon(r, offRiverSurface, -190, 190)));
 
-    // forest and rocks (instanced), kept off the track and the mud
+    const R = mulberry32(n * 31 + 7);
     const spots = [];
     let guard = 0;
-    while (spots.length < 170 && guard++ < 5000) {
-      const x = (Math.random() * 2 - 1) * 104, z = (Math.random() * 2 - 1) * 104;
-      if (Math.hypot(x, z) < 14 || distToRoute(x, z) < 7) continue;
-      if (OFF_POOLS.some(p => Math.hypot(x - p.x, z - p.z) < p.r + 3)) continue;
-      if (spots.some(s2 => Math.hypot(s2.x - x, s2.z - z) < 3.2)) continue;
-      spots.push({ x, z, rock: Math.random() < 0.22, s: 0.7 + Math.random() * 0.7 });
+    while (spots.length < C.treeCount && guard++ < 6000) {
+      const x = (R() * 2 - 1) * 106, z = (R() * 2 - 1) * 106;
+      if (Math.hypot(x, z) < 14 || offDistToRoute(x, z) < 7) continue;
+      if (C.pools.some(p => Math.hypot(x - p.x, z - p.z) < p.r + 3)) continue;
+      if (C.rivers.some(r => Math.abs(riverLat(r, x, z).lat) < r.w / 2 + 3)) continue;
+      if (offH(x, z) > 11) continue;
+      if (spots.some(s2 => Math.abs(s2.x - x) < 3.2 && Math.abs(s2.z - z) < 3.2)) continue;
+      spots.push({ x, z, rock: R() < 0.22, s: 0.7 + R() * 0.7 });
     }
-    const trees = spots.filter(p => !p.rock), rocks = spots.filter(p => p.rock);
-    const trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.16, 0.24, 1.8, 8), new THREE.MeshStandardMaterial({ color: 0x5a3f28, roughness: 0.9 }), trees.length);
-    const crown = new THREE.InstancedMesh(new THREE.ConeGeometry(1.5, 4, 9), new THREE.MeshStandardMaterial({ roughness: 0.85 }), trees.length);
-    const rock = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.8, 0), new THREE.MeshStandardMaterial({ color: 0x7d7a74, roughness: 0.9, flatShading: true }), rocks.length);
-    const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), ps = new THREE.Vector3();
-    trees.forEach((t, i) => {
-      const y = offH(t.x, t.z);
-      mtx.compose(ps.set(t.x, y + 0.9 * t.s, t.z), q.identity(), sc.set(t.s, t.s, t.s));
-      trunk.setMatrixAt(i, mtx);
-      mtx.compose(ps.set(t.x, y + (1.8 + 1.9) * t.s, t.z), q.identity(), sc.set(t.s, t.s, t.s));
-      crown.setMatrixAt(i, mtx);
-      crown.setColorAt(i, c.setHSL(0.27 + Math.random() * 0.06, 0.5, 0.16 + Math.random() * 0.08).convertSRGBToLinear());
-      OFF.trees.push({ x: t.x, z: t.z, r: 0.45 * t.s });
-    });
-    rocks.forEach((t, i) => {
-      mtx.compose(ps.set(t.x, offH(t.x, t.z) + 0.2, t.z), q.setFromEuler(new THREE.Euler(Math.random(), Math.random() * 6, Math.random())), sc.set(t.s * 1.3, t.s * 0.8, t.s));
-      rock.setMatrixAt(i, mtx);
-      OFF.trees.push({ x: t.x, z: t.z, r: 0.9 * t.s });
-    });
-    [trunk, crown, rock].forEach(im => { im.castShadow = true; im.receiveShadow = true; g.add(im); });
+    OFF.colliders = plantForest(g, spots, offH);
 
-    // checkpoint flags; the last one is the finish
-    const poleMat = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, metalness: 0.6, roughness: 0.3 });
-    const finishTex = (() => {
-      const cv = document.createElement('canvas');
-      cv.width = 64; cv.height = 40;
-      const gx = cv.getContext('2d');
-      for (let yy = 0; yy < 5; yy++) for (let xx = 0; xx < 8; xx++) { gx.fillStyle = (xx + yy) % 2 ? '#111' : '#fff'; gx.fillRect(xx * 8, yy * 8, 8, 8); }
-      return new THREE.CanvasTexture(cv);
-    })();
-    OFF_ROUTE.forEach(([x, z], i) => {
-      const fg = new THREE.Group();
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 4.2, 10), poleMat);
-      pole.position.y = 2.1;
-      pole.castShadow = true;
-      const last = i === OFF_ROUTE.length - 1;
-      const clothMat = last
-        ? new THREE.MeshStandardMaterial({ map: finishTex, side: THREE.DoubleSide })
-        : new THREE.MeshStandardMaterial({ color: 0xf2b33d, emissive: 0xf2b33d, emissiveIntensity: 0.35, side: THREE.DoubleSide });
-      const cloth = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.9, 8, 1), clothMat);
-      cloth.position.set(0, 3.7, 0.72);
-      cloth.rotation.y = Math.PI / 2;
-      const ring = new THREE.Mesh(new THREE.RingGeometry(3.6, 4.2, 48), new THREE.MeshBasicMaterial({ color: 0xf2b33d, transparent: true, opacity: 0.7, depthWrite: false }));
-      ring.rotation.x = -Math.PI / 2;
-      ring.position.y = 0.12;
-      fg.add(pole, cloth, ring);
-      fg.position.set(x, offH(x, z), z);
-      g.add(fg);
-      OFF.flagObjs.push({ g: fg, ring, cloth, clothMat });
+    // flags
+    OFF.flagObjs = [];
+    C.route.forEach(([x, z], i) => {
+      const fg = makeFlag(i === C.route.length - 1);
+      fg.g.position.set(x, offH(x, z), z);
+      g.add(fg.g);
+      OFF.flagObjs.push(fg);
     });
-
-    // arrow over the car pointing at the next flag
-    const arrowShape = new THREE.Shape([[1.0, 0], [0.1, 0.6], [0.1, 0.24], [-0.7, 0.24], [-0.7, -0.24], [0.1, -0.24], [0.1, -0.6]].map(([x, y]) => new THREE.Vector2(x, y)));
-    const arrowGeo = new THREE.ShapeGeometry(arrowShape);
-    arrowGeo.rotateX(-Math.PI / 2);
-    OFF.arrow = new THREE.Mesh(arrowGeo, new THREE.MeshStandardMaterial({ color: 0xf2b33d, emissive: 0xf2b33d, emissiveIntensity: 0.7, side: THREE.DoubleSide, transparent: true, opacity: 0.9 }));
+    OFF.arrow = makeArrow();
     g.add(OFF.arrow);
-
-    // mud spray
-    const N = 180;
-    const pgeo = new THREE.BufferGeometry();
-    const start = new Float32Array(N * 3);
-    for (let i = 0; i < N; i++) start[i * 3 + 1] = -100;
-    pgeo.setAttribute('position', new THREE.BufferAttribute(start, 3));
-    const pts = new THREE.Points(pgeo, new THREE.PointsMaterial({ color: 0x4a3020, size: 0.13 }));
-    pts.frustumCulled = false;
-    g.add(pts);
-    OFF.parts = { pts, vel: new Float32Array(N * 3), life: new Float32Array(N), next: 0, N };
+    OFF.parts = makeSpray();
+    g.add(OFF.parts.pts);
   }
 
-  function sprayMud(x, y, z, fx, fz) {
-    const P = OFF.parts;
+  const flagPoleMat = new THREE.MeshStandardMaterial({ color: 0xe8e8e8, metalness: 0.6, roughness: 0.3 });
+  const finishTex = (() => {
+    const cv = document.createElement('canvas');
+    cv.width = 64; cv.height = 40;
+    const gx = cv.getContext('2d');
+    for (let yy = 0; yy < 5; yy++) for (let xx = 0; xx < 8; xx++) { gx.fillStyle = (xx + yy) % 2 ? '#111' : '#fff'; gx.fillRect(xx * 8, yy * 8, 8, 8); }
+    return new THREE.CanvasTexture(cv);
+  })();
+  function makeFlag(last) {
+    const fg = new THREE.Group();
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 4.2, 10), flagPoleMat);
+    pole.position.y = 2.1;
+    pole.castShadow = true;
+    const clothMat = last
+      ? new THREE.MeshStandardMaterial({ map: finishTex, side: THREE.DoubleSide })
+      : new THREE.MeshStandardMaterial({ color: 0xf2b33d, emissive: 0xf2b33d, emissiveIntensity: 0.35, side: THREE.DoubleSide });
+    clothMat.userData.own = true;
+    const cloth = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.9, 8, 1), clothMat);
+    cloth.position.set(0, 3.7, 0.72);
+    cloth.rotation.y = Math.PI / 2;
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xf2b33d, transparent: true, opacity: 0.7, depthWrite: false });
+    ringMat.userData.own = true;
+    const ring = new THREE.Mesh(new THREE.RingGeometry(3.6, 4.2, 48), ringMat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.15;
+    fg.add(pole, cloth, ring);
+    return { g: fg, ring, cloth, clothMat };
+  }
+  function makeArrow() {
+    const shape = new THREE.Shape([[1.0, 0], [0.1, 0.6], [0.1, 0.24], [-0.7, 0.24], [-0.7, -0.24], [0.1, -0.24], [0.1, -0.6]].map(([x, y]) => new THREE.Vector2(x, y)));
+    const geo = new THREE.ShapeGeometry(shape);
+    geo.rotateX(-Math.PI / 2);
+    const mat = new THREE.MeshStandardMaterial({ color: 0xf2b33d, emissive: 0xf2b33d, emissiveIntensity: 0.7, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
+    mat.userData.own = true;
+    return new THREE.Mesh(geo, mat);
+  }
+  function makeSpray() {
+    const N = 200;
+    const start = new Float32Array(N * 3);
+    for (let i = 0; i < N; i++) start[i * 3 + 1] = -100;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(start, 3));
+    const mat = new THREE.PointsMaterial({ color: 0x4a3020, size: 0.13 });
+    mat.userData.own = true;
+    const pts = new THREE.Points(geo, mat);
+    pts.frustumCulled = false;
+    return { pts, vel: new Float32Array(N * 3), life: new Float32Array(N), next: 0, N };
+  }
+  function sprayAt(P, x, y, z, fx, fz, water) {
+    P.pts.material.color.setHex(water ? 0xa9c8d8 : 0x4a3020);
     const i = P.next; P.next = (P.next + 1) % P.N;
     const arr = P.pts.geometry.attributes.position.array;
     arr[i * 3] = x; arr[i * 3 + 1] = y; arr[i * 3 + 2] = z;
@@ -1503,8 +1931,7 @@
     P.vel[i * 3 + 2] = -fz * (2 + Math.random() * 3) + (Math.random() - 0.5) * 1.5;
     P.life[i] = 0.9;
   }
-  function updateSpray(dt) {
-    const P = OFF.parts;
+  function updateSprayP(P, dt) {
     const arr = P.pts.geometry.attributes.position.array;
     for (let i = 0; i < P.N; i++) {
       if (P.life[i] <= 0) { arr[i * 3 + 1] = -100; continue; }
@@ -1517,8 +1944,363 @@
     P.pts.geometry.attributes.position.needsUpdate = true;
   }
 
+  // ---------- Open world: three towns joined by a highway, forests, rivers, mountains ----------
+  const WORLD = { group: new THREE.Group(), built: false, colliders: [], boxes: [], pickups: [], cars: [], towns: [] };
+  WORLD.group.visible = false;
+  scene.add(WORLD.group);
+  const W_LX = 940, W_LZ = 250;
+  const TOWNS = [
+    { name: 'Борщівка', x: -650 },
+    { name: 'Вареники-Сіті', x: 0 },
+    { name: 'Галушкове', x: 650 }
+  ];
+  const TOWN_HALF = 110;
+  const W_RIVERS = [
+    { x0: -325, z0: 0, dx: 0, dz: 1, px: 1, pz: 0, A: 14, f: 0.02, ph: 0.4, w: 18, deep: 2.2 },
+    { x0: 325, z0: 0, dx: 0, dz: 1, px: 1, pz: 0, A: 12, f: 0.025, ph: 2.1, w: 16, deep: 2.0 }
+  ];
+  function inTown(x, z) { return TOWNS.find(t => Math.abs(x - t.x) < TOWN_HALF && Math.abs(z) < TOWN_HALF); }
+  function worldBase(x, z) {
+    const flatRoad = smoothstep(10, 40, Math.abs(z));
+    let townD = Infinity;
+    for (const t of TOWNS) townD = Math.min(townD, Math.max(Math.abs(x - t.x) - TOWN_HALF, Math.abs(z) - TOWN_HALF));
+    const flatTown = smoothstep(0, 30, townD);
+    let h = (3 * Math.sin(x * 0.013) * Math.cos(z * 0.017) + 1.5 * Math.sin(x * 0.031 + 1) * Math.sin(z * 0.027) + 2) * flatRoad * flatTown;
+    h += smoothstep(185, 245, Math.abs(z)) * (26 + 10 * Math.sin(x * 0.02));
+    h += smoothstep(880, 950, Math.abs(x)) * 30;
+    return h;
+  }
+  const worldRiverSurface = () => -0.9;
+  function worldH(x, z) {
+    let h = worldBase(x, z);
+    for (const r of W_RIVERS) {
+      if (Math.abs(z) < 9) continue; // the bridge keeps the highway level
+      const { lat } = riverLat(r, x, z);
+      const band = r.w / 2 + 5;
+      if (Math.abs(lat) < band) {
+        const half = r.w / 2;
+        const floorY = Math.abs(lat) < half ? -0.9 - r.deep * (1 - (lat / half) ** 2) : -0.6;
+        const w = 1 - smoothstep(half, band, Math.abs(lat));
+        h = h + (Math.min(h, floorY) - h) * w;
+      }
+    }
+    return h;
+  }
+  function worldSurf(x, z) {
+    if (Math.abs(z) < 9) return null;
+    for (const r of W_RIVERS) {
+      const { lat } = riverLat(r, x, z);
+      const half = r.w / 2;
+      if (Math.abs(lat) < half) return { type: 'water', d: r.deep * (1 - (lat / half) ** 2) + 0.05, surface: -0.9 };
+    }
+    return null;
+  }
+
+  function windowTexture() {
+    const c = document.createElement('canvas');
+    c.width = 64; c.height = 128;
+    const g = c.getContext('2d');
+    g.fillStyle = '#222'; g.fillRect(0, 0, 64, 128);
+    for (let y = 4; y < 128; y += 10) for (let x = 4; x < 64; x += 10) {
+      g.fillStyle = Math.random() < 0.6 ? '#ffd98a' : '#3a4250';
+      g.fillRect(x, y, 6, 6);
+    }
+    const t = new THREE.CanvasTexture(c);
+    t.encoding = THREE.sRGBEncoding;
+    return t;
+  }
+  function signSprite(text) {
+    const c = document.createElement('canvas');
+    c.width = 512; c.height = 128;
+    const g = c.getContext('2d');
+    g.fillStyle = '#1d5fbf'; g.fillRect(0, 0, 512, 128);
+    g.strokeStyle = '#fff'; g.lineWidth = 8; g.strokeRect(6, 6, 500, 116);
+    g.fillStyle = '#fff'; g.font = 'bold 56px Manrope, Arial, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(text, 256, 68);
+    const t = new THREE.CanvasTexture(c);
+    t.encoding = THREE.sRGBEncoding;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.5), new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide }));
+    return m;
+  }
+
+  const winTex = windowTexture();
+  const buildingMat = new THREE.MeshStandardMaterial({ map: winTex, emissiveMap: winTex, emissive: 0xffffff, emissiveIntensity: 0, roughness: 0.7 });
+  const billMat = new THREE.MeshStandardMaterial({ color: 0x2fae5a, emissive: 0x1d7a3a, emissiveIntensity: 0.8, metalness: 0.2, roughness: 0.4 });
+
+  function buildWorld() {
+    if (WORLD.built) return;
+    WORLD.built = true;
+    const g = WORLD.group;
+    const grass = new THREE.Color(0x587a34), forestFloor = new THREE.Color(0x3f5a26), rockC = new THREE.Color(0x7b766e), snow = new THREE.Color(0xf2f4f6), sand = new THREE.Color(0x9c8a64);
+    g.add(terrainMesh(1900, 520, 380, 104, worldH, (x, z, y, c) => {
+      c.copy(grass).lerp(forestFloor, 0.5 + 0.5 * Math.sin(x * 0.02) * Math.cos(z * 0.03));
+      if (y < -0.4) c.lerp(sand, 0.8);
+      c.lerp(rockC, smoothstep(8, 16, y));
+      c.lerp(snow, smoothstep(20, 26, y));
+    }));
+    // highway along z = 0
+    const hwTex = roadTex.clone();
+    hwTex.needsUpdate = true;
+    hwTex.repeat.set(1880 / 12, 1);
+    const hw = new THREE.Mesh(new THREE.PlaneGeometry(1880, ROAD_W), new THREE.MeshStandardMaterial({ map: hwTex, roughness: 0.82 }));
+    hw.rotation.x = -Math.PI / 2;
+    hw.position.y = 0.03;
+    hw.receiveShadow = true;
+    g.add(hw);
+    W_RIVERS.forEach(r => {
+      g.add(riverRibbon(r, worldRiverSurface, -260, 260));
+      // bridge over the river
+      const deck = new THREE.Mesh(new THREE.BoxGeometry(r.w + 14, 0.5, ROAD_W + 2), new THREE.MeshStandardMaterial({ color: 0x8c8c88, roughness: 0.8 }));
+      deck.position.set(r.x0, -0.22, 0);
+      deck.receiveShadow = true;
+      g.add(deck);
+      [-1, 1].forEach(sd => {
+        const rail = new THREE.Mesh(new THREE.BoxGeometry(r.w + 14, 0.9, 0.25), railMat);
+        rail.position.set(r.x0, 0.45, sd * (ROAD_W / 2 + 0.9));
+        rail.castShadow = true;
+        g.add(rail);
+        WORLD.boxes.push({ x: r.x0, z: sd * (ROAD_W / 2 + 0.9), hx: (r.w + 14) / 2, hz: 0.2 });
+      });
+      for (let i = -1; i <= 1; i += 2) {
+        const pier = new THREE.Mesh(new THREE.BoxGeometry(1.2, 4, ROAD_W), new THREE.MeshStandardMaterial({ color: 0x7a7a76 }));
+        pier.position.set(r.x0 + i * r.w * 0.3, -2.4, 0);
+        g.add(pier);
+      }
+    });
+
+    // towns: asphalt, sidewalk blocks, buildings, zebra crossings, signs
+    const asphalt = new THREE.MeshStandardMaterial({ color: srgb(0x3b3e43), roughness: 0.85 });
+    const sidewalk = new THREE.MeshStandardMaterial({ color: srgb(0xa7a49c), roughness: 0.9 });
+    const stripeMatW = new THREE.MeshStandardMaterial({ color: 0xf2f2ec, roughness: 0.6 });
+    const BLOCK = 40, STREET = 15, GRID = 4;
+    const span = GRID * BLOCK + (GRID + 1) * STREET;
+    const bPositions = [];
+    const zebra = [];
+    TOWNS.forEach((t, ti) => {
+      const base = new THREE.Mesh(new THREE.PlaneGeometry(span, span), asphalt);
+      base.rotation.x = -Math.PI / 2;
+      base.position.set(t.x, 0.02, 0);
+      base.receiveShadow = true;
+      g.add(base);
+      const R = mulberry32(ti * 101 + 5);
+      for (let i = 0; i < GRID; i++) for (let j = 0; j < GRID; j++) {
+        const bx = t.x - span / 2 + STREET + i * (BLOCK + STREET) + BLOCK / 2;
+        const bz = -span / 2 + STREET + j * (BLOCK + STREET) + BLOCK / 2;
+        // the highway runs through the middle street row: keep that row of blocks off z = 0
+        const blk = new THREE.Mesh(new THREE.BoxGeometry(BLOCK, 0.18, BLOCK), sidewalk);
+        blk.position.set(bx, 0.09, bz);
+        blk.receiveShadow = true;
+        g.add(blk);
+        const centre = 1 - Math.min(1, Math.hypot(bx - t.x, bz) / 120);
+        const n = 1 + Math.floor(R() * 3);
+        for (let b = 0; b < n; b++) {
+          const w = 12 + R() * 8, d = 12 + R() * 8;
+          const h = 8 + R() * 18 + centre * 45 * R();
+          const ox = (R() - 0.5) * (BLOCK - w), oz = (R() - 0.5) * (BLOCK - d);
+          const x = bx + ox, z = bz + oz;
+          bPositions.push({ x, z, w, d, h, c: new THREE.Color().setHSL(R(), 0.12 + R() * 0.15, 0.45 + R() * 0.3) });
+          WORLD.boxes.push({ x, z, hx: w / 2, hz: d / 2 });
+        }
+      }
+      // zebra crossings at each intersection along the street lines
+      for (let i = 0; i <= GRID; i++) for (let j = 0; j <= GRID; j++) {
+        const sx = t.x - span / 2 + STREET / 2 + i * (BLOCK + STREET);
+        const sz = -span / 2 + STREET / 2 + j * (BLOCK + STREET);
+        zebra.push([sx + STREET / 2 + 2, sz, 0], [sx, sz + STREET / 2 + 2, 1]);
+      }
+      // town signs on the highway
+      [-1, 1].forEach(sd => {
+        const sign = signSprite(t.name);
+        sign.position.set(t.x + sd * (span / 2 + 8), 4.2, -ROAD_W / 2 - 2);
+        sign.rotation.y = sd > 0 ? -Math.PI / 2 : Math.PI / 2;
+        g.add(sign);
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 4, 8), poleMat);
+        post.position.set(t.x + sd * (span / 2 + 8), 2, -ROAD_W / 2 - 2);
+        g.add(post);
+      });
+    });
+    const bGeo = new THREE.BoxGeometry(1, 1, 1);
+    bGeo.translate(0, 0.5, 0);
+    const bMesh = new THREE.InstancedMesh(bGeo, buildingMat, bPositions.length);
+    const mtx = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), ps = new THREE.Vector3();
+    bPositions.forEach((b, i) => {
+      mtx.compose(ps.set(b.x, 0.18, b.z), q.identity(), sc.set(b.w, b.h, b.d));
+      bMesh.setMatrixAt(i, mtx);
+      bMesh.setColorAt(i, b.c.convertSRGBToLinear());
+    });
+    bMesh.castShadow = true;
+    bMesh.receiveShadow = true;
+    g.add(bMesh);
+    const zGeo = new THREE.BoxGeometry(0.6, 0.03, 4);
+    const zMesh = new THREE.InstancedMesh(zGeo, stripeMatW, zebra.length * 6);
+    let zi = 0;
+    zebra.forEach(([x, z, rot]) => {
+      for (let k = -2.5; k <= 2.5; k++) {
+        if (rot) mtx.compose(ps.set(x + k * 1.6, 0.05, z), q.setFromEuler(new THREE.Euler(0, Math.PI / 2, 0)), sc.set(1, 1, 1));
+        else mtx.compose(ps.set(x, 0.05, z + k * 1.6), q.identity(), sc.set(1, 1, 1));
+        zMesh.setMatrixAt(zi++, mtx);
+      }
+    });
+    g.add(zMesh);
+
+    // forests between towns
+    const R = mulberry32(4242);
+    const spots = [];
+    let guard = 0;
+    while (spots.length < 1600 && guard++ < 20000) {
+      const x = (R() * 2 - 1) * 900, z = (R() * 2 - 1) * 225;
+      if (Math.abs(z) < 16) continue;
+      if (TOWNS.some(t => Math.abs(x - t.x) < TOWN_HALF + 12 && Math.abs(z) < TOWN_HALF + 12)) continue;
+      if (W_RIVERS.some(r => Math.abs(riverLat(r, x, z).lat) < r.w / 2 + 4)) continue;
+      if (worldH(x, z) > 14) continue;
+      spots.push({ x, z, rock: R() < 0.12, s: 0.7 + R() * 0.8 });
+    }
+    WORLD.colliders = plantForest(g, spots, worldH);
+
+    // dollar pickups along streets, the highway and forest tracks
+    const billGeo = new THREE.BoxGeometry(0.9, 0.45, 0.04);
+    for (let i = 0; i < 160; i++) {
+      let x, z;
+      if (i < 60) { x = (R() * 2 - 1) * 900; z = (R() < 0.5 ? -1 : 1) * 2.5; }
+      else if (i < 120) {
+        const t = TOWNS[i % 3];
+        const line = -span / 2 + STREET / 2 + Math.floor(R() * (GRID + 1)) * (BLOCK + STREET);
+        if (R() < 0.5) { x = t.x + line; z = (R() - 0.5) * span; } else { x = t.x + (R() - 0.5) * span; z = line; }
+      } else { x = (R() * 2 - 1) * 880; z = (R() < 0.5 ? -1 : 1) * (30 + R() * 160); }
+      if (worldSurf(x, z)) continue;
+      const m = new THREE.Mesh(billGeo, billMat);
+      m.position.set(x, worldH(x, z) + 1, z);
+      m.castShadow = true;
+      g.add(m);
+      WORLD.pickups.push({ m, x, z, t: 0 });
+    }
+
+    // a few cars cruising the highway for company
+    for (let i = 0; i < 8; i++) {
+      const model = MODELS[(i * 5) % 12];
+      const tp = paint.clone(), tr = paint.clone();
+      tp.color.setHex(TRAFFIC_COLORS[i % TRAFFIC_COLORS.length]).convertSRGBToLinear();
+      tr.color.copy(tp.color);
+      tr.clippingPlanes = [new THREE.Plane(new THREE.Vector3(0, 1, 0), -model.roofCut)];
+      const build = buildCar(model, { paint: tp, roof: tr, glass: stockGlass, rim: alloy, caliper: stockCaliper }, STOCK_TUNING);
+      const dir = i % 2 ? 1 : -1;
+      build.root.rotation.y = dir > 0 ? 0 : Math.PI;
+      g.add(build.root);
+      WORLD.cars.push({ obj: build.root, spins: build.spins, x: -880 + i * 230, z: dir > 0 ? -2.6 : 2.6, dir, v: 14 + (i % 3) * 3, model, roll: 0 });
+    }
+    WORLD.arrow = makeArrow();
+    WORLD.arrow.visible = false;
+    g.add(WORLD.arrow);
+    WORLD.parts = makeSpray();
+    g.add(WORLD.parts.pts);
+  }
+
+  // ---------- Rain ----------
+  const RAIN_N = 1600;
+  const rainGeo = new THREE.BufferGeometry();
+  const rainPos = new Float32Array(RAIN_N * 6);
+  for (let i = 0; i < RAIN_N; i++) {
+    const x = (Math.random() - 0.5) * 50, y = Math.random() * 26, z = (Math.random() - 0.5) * 50;
+    rainPos.set([x, y, z, x + 0.05, y - 0.55, z], i * 6);
+  }
+  rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+  const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xbcd4e6, transparent: true, opacity: 0.55 }));
+  rain.frustumCulled = false;
+  rain.visible = false;
+  scene.add(rain);
+  function updateRain(dt) {
+    if (!rain.visible) return;
+    rain.position.set(camera.position.x, camera.position.y - 12, camera.position.z);
+    const a = rainGeo.attributes.position.array;
+    for (let i = 0; i < RAIN_N; i++) {
+      const o = i * 6;
+      a[o + 1] -= 24 * dt; a[o + 4] -= 24 * dt;
+      if (a[o + 4] < 0) { a[o + 1] += 26; a[o + 4] += 26; }
+    }
+    rainGeo.attributes.position.needsUpdate = true;
+  }
+
+  // ---------- Trailer ----------
+  const trailer = { group: new THREE.Group(), cargo: null, cargoId: '', yaw: 0, spins: [] };
+  trailer.group.visible = false;
+  scene.add(trailer.group);
+  (() => {
+    const g = trailer.group;
+    const steel = new THREE.MeshStandardMaterial({ color: 0x3a3d42, metalness: 0.7, roughness: 0.4 });
+    const deckMat = new THREE.MeshStandardMaterial({ color: 0x6b5338, roughness: 0.8 });
+    const add = (geo, mat, x, y, z, rz) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); if (rz) m.rotation.z = rz; m.castShadow = true; m.receiveShadow = true; g.add(m); return m; };
+    add(new THREE.BoxGeometry(1.6, 0.1, 0.12), steel, -0.8, 0.45, 0);              // drawbar
+    add(new THREE.BoxGeometry(0.2, 0.12, 0.2), chrome, -0.05, 0.45, 0);            // coupling
+    add(new THREE.BoxGeometry(5.6, 0.1, 2.1), deckMat, -4.2, 0.66, 0);             // deck
+    [-1, 1].forEach(s => {
+      add(new THREE.BoxGeometry(5.8, 0.16, 0.1), steel, -4.2, 0.56, s * 1.0);      // side rails
+      add(new THREE.BoxGeometry(1.9, 0.06, 0.4), steel, -4.1, 0.86, s * 1.2);      // fenders
+      add(new THREE.BoxGeometry(1.4, 0.05, 0.4), steel, -7.6, 0.33, s * 0.7, 0.45); // ramps
+      add(new THREE.BoxGeometry(0.08, 0.12, 0.3), tailMat, -7.0, 0.6, s * 0.9);    // lights
+    });
+    [-3.6, -4.6].forEach(x => [-1, 1].forEach(s => {
+      const w = new THREE.Group();
+      w.scale.setScalar(0.78);
+      w.position.set(x, 0.27, s * 1.18);
+      const spin = new THREE.Group();
+      const tire = new THREE.Mesh(tireGeo, rubber);
+      tire.castShadow = true;
+      const rimM = new THREE.Mesh(innerGeo, steel);
+      rimM.position.z = s * 0.08;
+      if (s < 0) rimM.rotation.y = Math.PI;
+      spin.add(tire, rimM);
+      w.add(spin);
+      g.add(w);
+      trailer.spins.push(spin);
+    }));
+  })();
+  const hitchBall = new THREE.Mesh(new THREE.SphereGeometry(0.06, 12, 8), chrome);
+  car.add(hitchBall);
+
+  function setTrailerCargo(id) {
+    if (trailer.cargo) { trailer.group.remove(trailer.cargo); disposeGroup(trailer.cargo); trailer.cargo = null; }
+    trailer.cargoId = id || '';
+    const model = MODELS.find(m => m.id === id);
+    if (!model || model.monster) return;
+    const tp = paint.clone(), tr = paint.clone();
+    const sig = PAINTS.find(p => p.name === model.paint) || PAINTS[1];
+    tp.color.setHex(sig.hex).convertSRGBToLinear();
+    tr.color.copy(tp.color);
+    tr.clippingPlanes = [new THREE.Plane(new THREE.Vector3(0, 1, 0), -model.roofCut)];
+    const build = buildCar(model, { paint: tp, roof: tr, glass: stockGlass, rim: alloy, caliper: stockCaliper }, STOCK_TUNING);
+    build.root.position.set(-4.2 + (model.Lf + model.Lr) / -2, 0.71, 0);
+    trailer.cargo = build.root;
+    trailer.group.add(build.root);
+    trailer.cargoModel = model;
+  }
+  const tmpH = new THREE.Vector3();
+  function updateTrailer(dt, speed, hFn) {
+    const on = save.trailer && save.trailerOn && !heroModel().monster;
+    trailer.group.visible = on;
+    hitchBall.visible = on;
+    if (!on) return;
+    const s = heroModel();
+    hitchBall.position.set(s.Lr - 0.28, 0.45 + heroRide * 0.5, 0);
+    car.updateMatrixWorld();
+    car.localToWorld(tmpH.set(s.Lr - 0.3, 0, 0));
+    const carYaw = (game.kind === 'offroad' || game.kind === 'world') && mode === 'game' ? game.heading : car.rotation.y;
+    if (mode === 'game' && (game.kind === 'offroad' || game.kind === 'world')) {
+      let diff = carYaw - trailer.yaw;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      trailer.yaw += diff * Math.min(1, Math.abs(speed) * dt / 4.2);
+    } else trailer.yaw = carYaw;
+    trailer.group.position.copy(tmpH);
+    trailer.group.rotation.set(0, trailer.yaw, 0);
+    if (hFn) {
+      const ax = tmpH.x - Math.cos(trailer.yaw) * 4.1, az = tmpH.z + Math.sin(trailer.yaw) * 4.1;
+      trailer.group.rotateZ(Math.atan2(tmpH.y - hFn(ax, az), 4.1));
+    }
+    trailer.spins.forEach(sp => (sp.rotation.z = roll * (heroModel().wheelR / 0.27)));
+  }
+
   // ---------- Scene toggles ----------
-  const state = { night: false, lights: false, drive: false };
+  const state = { night: false, lights: false, drive: false, rain: false };
+  const tRain = document.getElementById('tRain');
   const tNight = document.getElementById('tNight');
   const tLights = document.getElementById('tLights');
   const tDrive = document.getElementById('tDrive');
@@ -1526,20 +2308,28 @@
     tNight.setAttribute('aria-pressed', String(state.night));
     tLights.setAttribute('aria-pressed', String(state.lights));
     tDrive.setAttribute('aria-pressed', String(state.drive));
+    tRain.setAttribute('aria-pressed', String(state.rain));
     const inGame = mode === 'game';
-    const offroad = inGame && game.kind === 'offroad';
-    const bg = state.night ? 0x05070b : offroad ? 0xb9c9d8 : inGame ? 0xa9bccd : 0x7c8592;
+    const kind = inGame ? game.kind : 'studio';
+    const free = kind === 'offroad' || kind === 'world';
+    const wet = state.rain;
+    const bg = state.night ? 0x05070b : wet ? 0x7d8794 : free ? 0xb9c9d8 : inGame ? 0xa9bccd : 0x7c8592;
     scene.background = new THREE.Color(bg);
-    scene.fog = offroad ? new THREE.Fog(bg, 35, 150) : inGame ? new THREE.Fog(bg, 50, 190) : new THREE.Fog(bg, 14, 34);
-    world.visible = inGame && !offroad;
-    OFF.group.visible = offroad;
-    floor.visible = !offroad;
-    blob.visible = !offroad;
-    document.body.classList.toggle('offroad', offroad);
+    const fogK = wet ? 0.6 : 1;
+    scene.fog = kind === 'world' ? new THREE.Fog(bg, 60 * fogK, 260 * fogK) : free ? new THREE.Fog(bg, 35 * fogK, 150 * fogK) : inGame ? new THREE.Fog(bg, 50 * fogK, 190 * fogK) : new THREE.Fog(bg, 14, 34);
+    world.visible = kind === 'highway';
+    OFF.group.visible = kind === 'offroad';
+    WORLD.group.visible = kind === 'world';
+    floor.visible = !free;
+    blob.visible = !free;
+    rain.visible = wet;
+    road.material.roughness = wet ? 0.3 : 0.82;
+    buildingMat.emissiveIntensity = state.night ? 0.9 : 0;
+    document.body.classList.toggle('offroad', free);
     floorMat.roughness = inGame ? 0.95 : 0.42;
     setShadowBounds(inGame ? 22 : 5);
     lampHead.emissiveIntensity = state.night ? 3 : 0.3;
-    sun.intensity = state.night ? 0.08 : 1.6;
+    sun.intensity = state.night ? 0.08 : wet ? 0.7 : 1.6;
     hemi.intensity = state.night ? 0.05 : 0.35;
     scene.environment = state.night ? nightEnv : dayEnv;
     floorMat.color.setHex(inGame ? (state.night ? 0x10140e : 0x3d4a33) : (state.night ? 0x1d2025 : 0x2a2e34));
@@ -1565,6 +2355,7 @@
   tNight.addEventListener('click', () => { state.night = !state.night; applyScene(); });
   tLights.addEventListener('click', () => { state.lights = !state.lights; applyScene(); });
   tDrive.addEventListener('click', () => { state.drive = !state.drive; applyScene(); });
+  tRain.addEventListener('click', () => { state.rain = !state.rain; applyScene(); });
   applyScene();
 
   // ---------- Cameras ----------
@@ -1646,23 +2437,26 @@
       const r = (6.2 + Math.sin(t * 0.31) * 1.4) * (portrait ? 1.5 : 1);
       outPos.set(Math.cos(a) * r, 0.7 + (Math.sin(t * 0.23) + 1) * 0.9, Math.sin(a) * r);
       outTarget.set(0, 0.55, 0);
-    } else if (c.id === 'g-chase' && game.kind === 'offroad') {
+    } else if (c.id === 'g-chase' && isFree()) {
       const f = offFwd.set(Math.cos(game.heading), 0, -Math.sin(game.heading));
-      const back = portrait ? 11 : 8.5;
+      const towing = trailer.group.visible ? 7 : 0;
+      const back = (portrait ? 11 : 8.5) + towing;
       offDesired.copy(car.position).addScaledVector(f, -back);
-      offDesired.y = Math.max(car.position.y + (portrait ? 4.6 : 3.4), offH(offDesired.x, offDesired.z) + 1.4);
+      const tall = heroModel().monster ? 1.6 : 0;
+      offDesired.y = Math.max(car.position.y + (portrait ? 4.6 : 3.4) + tall + towing * 0.3, FD.h(offDesired.x, offDesired.z) + 1.4);
       if (!game.camInit) { offCam.copy(offDesired); game.camInit = true; }
       offCam.lerp(offDesired, 0.08);
       outPos.copy(offCam);
       outTarget.copy(car.position).addScaledVector(f, 6);
       outTarget.y += 0.8;
-    } else if (c.id === 'g-top' && game.kind === 'offroad') {
+    } else if (c.id === 'g-top' && isFree()) {
       const f = offFwd.set(Math.cos(game.heading), 0, -Math.sin(game.heading));
       outPos.copy(car.position).addScaledVector(f, -4);
       outPos.y += portrait ? 24 : 17;
       outTarget.copy(car.position).addScaledVector(f, 7);
     } else if (c.id === 'g-chase') {
-      outPos.set(portrait ? -12 : -9, portrait ? 5 : 3.7, z * 0.7);
+      const tow = trailer.group.visible ? 7 : 0, tall = heroModel().monster ? 1.6 : 0;
+      outPos.set((portrait ? -12 : -9) - tow, (portrait ? 5 : 3.7) + tow * 0.3 + tall, z * 0.7);
       outTarget.set(12, 0.4, z * 0.85);
     } else if (c.id === 'g-hood') {
       const hm = heroModel();
@@ -1718,78 +2512,188 @@
   const ease = k => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
 
   // ---------- Game ----------
-  const LEVELS = [
-    { id: 'easy', name: 'Учень', tag: 'Легко', color: '#7fd18b', level: 1,
-      desc: 'Спокійний потік, 5 життів і жодного конуса. Інструктор поруч і майже не кричить.',
-      start: 16, max: 30, ramp: 0.004, gap: [46, 70], lives: 5, cones: 0, laneChange: 0, double: 0.1 },
-    { id: 'normal', name: 'Водій', tag: 'Нормально', color: '#f2b33d', level: 2,
-      desc: 'Щільніший рух і конуси на смугах. 3 життя, як у справжньому житті, тільки чесніше.',
-      start: 22, max: 42, ramp: 0.006, gap: [30, 46], lives: 3, cones: 0.3, laneChange: 0, double: 0.3 },
-    { id: 'hard', name: 'Таксист', tag: 'Складно', color: '#ff8a3d', level: 3,
-      desc: 'Швидко й тісно, а сусіди перестроюються без поворотників. 2 життя.',
-      start: 28, max: 55, ramp: 0.008, gap: [22, 34], lives: 2, cones: 0.35, laneChange: 0.35, double: 0.45 },
-    { id: 'insane', name: 'Маршрутка', tag: 'Божевільно', color: '#ff5a5f', level: 4,
-      desc: 'Ніч, одне життя і повний салон пасажирів, які все бачать і все коментують.',
-      start: 33, max: 68, ramp: 0.01, gap: [16, 26], lives: 1, cones: 0.45, laneChange: 0.6, double: 0.55, night: true }
-  ];
   const QUIPS = [
     'Страховий агент уже набирає ваш номер.',
     'Добре, що це не татова машина.',
     'Конус переміг. Цього разу.',
-    'ДАІ просить вас більше так не робити.',
+    'Поліція просить вас більше так не робити.',
     'Ремонт оцінюється в три зарплати й одну подорож.',
     'Пасажири маршрутки аплодують стоячи.'
   ];
+  const WIN_QUIPS = [
+    'Чисто, швидко, без жодної подряпини. Майже.',
+    'Інструктор пустив сльозу гордості.',
+    'Сусіди вже питають, де ви навчилися так їздити.',
+    'Шини гарячі, гаманець товстіший.',
+    'Ще трохи, і вас візьмуть у Формулу-1. Або в таксі.'
+  ];
   const $ = id => document.getElementById(id);
-  const menuEl = $('menu'), pauseEl = $('pauseOv'), overEl = $('over');
+  const menuEl = $('menu'), pauseEl = $('pauseOv'), overEl = $('over'), introEl = $('intro');
   const hDist = $('hDist'), hSpeed = $('hSpeed'), hCoins = $('hCoins'), hLives = $('hLives');
   const flashEl = $('flash'), toastEl = $('toast'), hintEl = $('hint'), modeBtn = $('modeBtn');
   const input = { left: false, right: false, gas: false, brake: false };
-
-  const bestKey = id => 'car-game-best-' + id;
-  function loadBest(id) { try { return Number(localStorage.getItem(bestKey(id))) || 0; } catch (e) { return 0; } }
-  function saveBest(id, v) { try { localStorage.setItem(bestKey(id), String(v)); } catch (e) { /* storage blocked */ } }
-  const fmt = n => Math.floor(n).toLocaleString('uk-UA');
-
-  function renderLevels() {
-    const wrap = $('levels');
-    wrap.innerHTML = '';
-    LEVELS.forEach(L => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'level';
-      b.style.setProperty('--tag', L.color);
-      const best = loadBest(L.id);
-      b.innerHTML = `
-        <div class="level-head"><span class="level-name">${L.name}</span><span class="level-tag" style="background:${L.color}">${L.tag}</span></div>
-        <div class="meter" aria-label="Складність ${L.level} з 4">${[1, 2, 3, 4].map(i => `<i class="${i <= L.level ? 'on' : ''}"></i>`).join('')}</div>
-        <div class="level-desc">${L.desc}</div>
-        <div class="level-best">${best ? 'Рекорд: ' + fmt(best) : 'Ще не пройдено'}</div>`;
-      b.addEventListener('click', () => startGame(L));
-      wrap.appendChild(b);
-    });
-    const ow = $('offLevels');
-    ow.innerHTML = '';
-    const ob = document.createElement('button');
-    ob.type = 'button';
-    ob.className = 'level wide';
-    ob.style.setProperty('--tag', '#8a6a3f');
-    const ot = loadBest('offroad');
-    const hm = heroModel();
-    const clearance = hm.bottom + heroRide;
-    const fit = clearance >= 0.46 ? 'Ваша машина висока: з повним приводом пройде всі болота.' : clearance >= 0.3 ? 'Ваша машина пройде мілку багнюку, а в глибокій застрягне навіть з 4×4.' : 'Ваша машина надто низька: у багнюці застрягне одразу. Візьміть джип.';
-    ob.innerHTML = `
-      <div class="level-head"><span class="level-name">Лісові болота</span><span class="level-tag" style="background:#c79a5b">Бездоріжжя</span></div>
-      <div class="level-desc">Пагорби, ліс і багнюка. Знайди всі 8 прапорців якнайшвидше. У глибокому болоті без повного приводу (F) застрягнеш. ${fit}</div>
-      <div class="level-best">${ot ? 'Рекорд: ' + fmtTime(ot) : 'Ще не пройдено'}</div>`;
-    ob.addEventListener('click', startOffroad);
-    ow.appendChild(ob);
-  }
   const fmtTime = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}.${Math.floor((sec % 1) * 10)}`;
+  const HW_COUNT = 100;
 
+  function hwLevel(n) {
+    const k = (n - 1) / (HW_COUNT - 1);
+    return {
+      kind: 'highway', n, name: `Шосе ${n}`,
+      target: Math.round(450 + n * 32),
+      start: 15 + k * 20, max: 28 + k * 42, ramp: 0.004 + k * 0.007,
+      gap: [46 - k * 30, 70 - k * 42],
+      lives: n <= 10 ? 5 : n <= 35 ? 4 : n <= 70 ? 3 : 2,
+      cones: n < 3 ? 0 : Math.min(0.5, 0.15 + k * 0.4),
+      laneChange: n < 12 ? 0 : Math.min(0.7, k * 0.8),
+      double: Math.min(0.6, 0.1 + k * 0.5),
+      police: n < 8 ? 0 : Math.min(0.12, 0.02 + k * 0.1),
+      blockEvery: n < 15 ? 0 : Math.max(4, Math.round(10 - k * 6)),
+      night: n % 10 === 0, rain: n % 7 === 0,
+      reward: 100 + n * 15
+    };
+  }
+
+  // ---------- Police and roadblocks ----------
+  const polRed = new THREE.MeshStandardMaterial({ color: 0x400000, emissive: 0xff1a1a, emissiveIntensity: 2 });
+  const polBlue = new THREE.MeshStandardMaterial({ color: 0x000a40, emissive: 0x1a4dff, emissiveIntensity: 2 });
+  const polStripe = new THREE.MeshStandardMaterial({ color: srgb(0x1d4fb8), roughness: 0.4 });
+  const policePool = [];
+  for (let i = 0; i < 6; i++) {
+    const model = MODELS.find(m => m.id === 'bavar');
+    const tp = paint.clone();
+    tp.color.setHex(0xf4f4f2).convertSRGBToLinear();
+    tp.metalness = 0.2;
+    const tr = tp.clone();
+    tr.clippingPlanes = [new THREE.Plane(new THREE.Vector3(0, 1, 0), -model.roofCut)];
+    const build = buildCar(model, { paint: tp, roof: tr, glass: stockGlass, rim: alloy, caliper: stockCaliper }, STOCK_TUNING);
+    const root = build.root;
+    [-1, 1].forEach(sd => {
+      const st = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.16, 0.02), polStripe);
+      st.position.set(-0.2, model.beltY - 0.24, sd * (model.width / 2 + 0.01));
+      root.add(st);
+    });
+    const barX = (model.wsTopX + model.roofRearX) / 2;
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.06, 0.95), blackGloss);
+    base.position.set(barX, model.roofY + 0.06, 0);
+    const red = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.09, 0.4), polRed);
+    red.position.set(barX, model.roofY + 0.12, -0.24);
+    const blue = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.09, 0.4), polBlue);
+    blue.position.set(barX, model.roofY + 0.12, 0.24);
+    root.add(base, red, blue);
+    const sh = blob.clone();
+    sh.scale.set((model.Lf - model.Lr) / 4.64, 1, model.width / 1.84);
+    root.add(sh);
+    root.visible = false;
+    world.add(root);
+    policePool.push({ obj: root, spins: build.spins, model });
+  }
+  const barrierTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = 256; c.height = 48;
+    const g = c.getContext('2d');
+    g.fillStyle = '#f4f4f0'; g.fillRect(0, 0, 256, 48);
+    g.fillStyle = '#d4141c';
+    for (let x = -48; x < 256; x += 48) { g.beginPath(); g.moveTo(x, 48); g.lineTo(x + 24, 48); g.lineTo(x + 48, 0); g.lineTo(x + 24, 0); g.fill(); }
+    const t = new THREE.CanvasTexture(c);
+    t.encoding = THREE.sRGBEncoding;
+    return t;
+  })();
+  const barrierMat = new THREE.MeshStandardMaterial({ map: barrierTex, roughness: 0.5 });
+  const lampYellow = new THREE.MeshStandardMaterial({ color: 0x664400, emissive: 0xffb000, emissiveIntensity: 2 });
+  const barrierPool = [];
+  for (let i = 0; i < 8; i++) {
+    const g = new THREE.Group();
+    const board = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.45, 2.6), barrierMat);
+    board.position.y = 0.8;
+    board.castShadow = true;
+    g.add(board);
+    [-1.1, 1.1].forEach(z => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.8, 0.08), blackPlastic);
+      leg.position.set(0, 0.4, z);
+      g.add(leg);
+      const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), lampYellow);
+      lamp.position.set(0, 1.1, z);
+      g.add(lamp);
+    });
+    g.visible = false;
+    world.add(g);
+    barrierPool.push({ obj: g });
+  }
+  // distant mountains along the highway
+  const mtnMat = new THREE.MeshStandardMaterial({ color: srgb(0x5d6a72), roughness: 1, flatShading: true });
+  const capMat = new THREE.MeshStandardMaterial({ color: 0xf4f6f8, roughness: 0.9, flatShading: true });
+  const MTN_GAP = 75, MTN_COUNT = 14;
+  const mountains = [];
+  for (let i = 0; i < MTN_COUNT; i++) {
+    const g = new THREE.Group();
+    const r = 30 + Math.random() * 25, h = 40 + Math.random() * 40;
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(r, h, 7), mtnMat);
+    cone.position.y = h / 2 - 3;
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(r * 0.3, h * 0.3, 7), capMat);
+    cap.position.y = h - 3 - h * 0.15 + 0.5;
+    g.add(cone, cap);
+    g.position.z = (i % 2 ? 1 : -1) * (95 + Math.random() * 60);
+    world.add(g);
+    mountains.push({ g, wx: i * MTN_GAP });
+  }
+
+  // ---------- Results, menus, intro ----------
   function showOverlay(el) {
     [menuEl, pauseEl, overEl].forEach(o => (o.hidden = o !== el));
   }
+  function showResult({ title, quip, big, rows, note, again }) {
+    $('overTitle').textContent = title;
+    $('overQuip').textContent = quip;
+    $('overScore').textContent = big;
+    $('overRows').innerHTML = rows.map(([k, v]) => `<span>${k}: <b>${v}</b></span>`).join('');
+    $('overRecord').hidden = !note;
+    $('overRecord').textContent = note || '';
+    $('againBtn').textContent = again;
+    setTimeout(() => { if (!game.running && mode === 'game') showOverlay(overEl); }, 800);
+  }
+
+  let menuTab = 'hw';
+  function renderLevels() {
+    document.querySelectorAll('#menu .tab').forEach(t => t.setAttribute('aria-selected', String(t.dataset.tab === menuTab)));
+    const grid = $('lvgrid');
+    grid.innerHTML = '';
+    const total = cleared();
+    const monster = monsterOpen() ? 'Монстр-траки вже відкриті!' : `Монстр-траки відкриються після 100 пройдених рівнів (зараз ${total}).`;
+    if (menuTab === 'world') {
+      $('tabDesc').textContent = 'Три міста, траса з мостами, річки, ліси й гори. Їдьте куди хочете й збирайте долари. Причіп теж можна взяти з собою.';
+      grid.className = 'lvgrid single';
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'level wide';
+      b.innerHTML = `<div class="level-head"><span class="level-name">Відкритий світ</span><span class="level-tag" style="background:#6fb3e0">Вільна їзда</span></div>
+        <div class="level-desc">Борщівка, Вареники-Сіті й Галушкове з'єднані трасою. Між ними ліси, дві річки з мостами й гори на краях карти. На вулицях і в лісі лежать долари: $25 за кожну купюру.</div>`;
+      b.addEventListener('click', startWorld);
+      grid.appendChild(b);
+      return;
+    }
+    const isHw = menuTab === 'hw';
+    const N = isHw ? HW_COUNT : OFF_COUNT, done = isHw ? save.hw : save.off;
+    $('tabDesc').textContent = isHw
+      ? `100 рівнів шосе: доїдьте до фінішу й не розбийтеся. З 8-го рівня з'являється поліція, з 15-го перекриття доріг. Кожен 10-й рівень нічний, кожен 7-й під дощем. Пройдено ${done} з 100. ${monster}`
+      : `150 рівнів бездоріжжя: ліс, річки, гори й болота. Зберіть усі прапорці, поки не скінчився час. Річки краще переїжджати бродом, там, де проходить колія. Пройдено ${done} з 150. ${monster}`;
+    grid.className = 'lvgrid';
+    for (let n = 1; n <= N; n++) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'lv' + (n <= done ? ' done' : '') + (n === done + 1 ? ' next' : '');
+      b.textContent = String(n);
+      const night = isHw ? n % 10 === 0 : n % 15 === 0;
+      const wet = isHw ? n % 7 === 0 : n % 6 === 0;
+      if (night) b.classList.add('night');
+      b.title = `Рівень ${n}${night ? ' · ніч' : ''}${wet ? ' · дощ' : ''}`;
+      if (n > done + 1) { b.disabled = true; b.title += ' · закрито'; }
+      b.addEventListener('click', () => (isHw ? startHwLevel(n) : startOffLevel(n)));
+      grid.appendChild(b);
+    }
+    const next = grid.querySelector('.next');
+    if (next) requestAnimationFrame(() => next.scrollIntoView({ block: 'nearest' }));
+  }
+  document.querySelectorAll('#menu .tab').forEach(t => t.addEventListener('click', () => { menuTab = t.dataset.tab; renderLevels(); }));
 
   function clearItems() {
     game.items.forEach(it => (it.obj.visible = false));
@@ -1800,15 +2704,34 @@
     car.position.set(0, 0, 0);
     car.rotation.set(0, 0, 0);
     car.visible = true;
-    body.rotation.x = 0;
-    wheels.forEach(w => (w.group.rotation.y = 0));
+    body.rotation.set(0, 0, 0);
+    wheels.forEach(w => { w.group.rotation.y = 0; w.group.position.y = heroModel().wheelR; });
+    game.heading = 0;
+    trailer.yaw = 0;
   }
 
-  function enterGame() {
+  function clearPreview() {
+    if (garage.preview) {
+      garage.preview = null;
+      rebuildHero();
+      applyPaint(PAINTS[garage.paint] || PAINTS[0]);
+      renderGarage();
+    }
+  }
+
+  const userWeather = { night: false, rain: false };
+  function setLevelWeather(night, rain) {
+    state.night = !!night;
+    state.rain = !!rain;
+  }
+
+  function enterGame(skipMenu) {
+    hideIntro();
+    if (mode !== 'game') { userWeather.night = state.night; userWeather.rain = state.rain; }
     mode = 'game';
     game.kind = 'highway';
     document.body.classList.add('in-game');
-    modeBtn.textContent = 'Студія';
+    modeBtn.textContent = 'Гараж';
     state.drive = false;
     CAMS = GAME_CAMS;
     renderCams();
@@ -1818,10 +2741,11 @@
     resetCar();
     posts.forEach(p => (p.g.position.x = p.wx));
     applyScene();
-    openMenu();
+    if (!skipMenu) openMenu();
   }
 
   function exitGame() {
+    if (mode === 'game') { state.night = userWeather.night; state.rain = userWeather.rain; }
     mode = 'studio';
     game.running = false;
     document.body.classList.remove('in-game', 'playing');
@@ -1830,13 +2754,13 @@
     showOverlay(null);
     clearItems();
     resetCar();
-    if (game.forcedNight) { state.night = false; game.forcedNight = false; }
     CAMS = STUDIO_CAMS;
     renderCams();
     current = { dynamic: true };
     setCam('free');
     hintEl.textContent = 'Клавіші 1–9 перемикають камери · колесо миші — наближення';
     applyScene();
+    renderGarage();
   }
 
   function openMenu() {
@@ -1848,34 +2772,46 @@
     hintEl.textContent = '';
   }
 
-  function startGame(L) {
-    game.kind = 'highway';
-    $('hDistL').textContent = 'метрів';
-    $('hCoinsL').textContent = 'монет';
-    game.level = L;
+  function beginRun(kind) {
+    clearPreview();
+    game.kind = kind;
     game.running = true;
     game.paused = false;
-    game.speed = L.start;
-    game.dist = 0;
-    game.coins = 0;
-    const st = computeStats(heroModel(), garage.tuning);
-    game.mods = { speed: 0.9 + st.speed * 0.035, gas: 1.15 + st.speed * 0.04, steer: 0.7 + st.handling * 0.1 };
-    game.lives = L.lives + (st.armor >= 5 ? 1 : 0);
-    game.z = 0; game.vz = 0; game.steer = 0;
-    game.invuln = 0; game.shake = 0;
-    game.nextRow = 70;
-    if (game.forcedNight && !L.night) { state.night = false; game.forcedNight = false; }
-    if (L.night && !state.night) { state.night = true; game.forcedNight = true; }
+    game.result = '';
+    game.shake = 0; game.steer = 0; game.vz = 0; game.coins = 0;
     clearItems();
     resetCar();
-    posts.forEach(p => (p.g.position.x = p.wx));
-    applyScene();
     showOverlay(null);
     document.body.classList.add('playing');
     frameView();
+  }
+
+  function startHwLevel(n) { startGame(hwLevel(n)); }
+  function startGame(L) {
+    if (mode !== 'game') enterGame(true);
+    beginRun('highway');
+    $('hDistL').textContent = 'до фінішу';
+    $('hCoinsL').textContent = 'монет';
+    game.level = L;
+    game.speed = L.start;
+    game.dist = 0;
+    game.rowCount = 0;
+    const st = computeStats(heroModel(), garage.tuning);
+    game.mods = { speed: 0.9 + st.speed * 0.035, gas: 1.15 + st.speed * 0.04, steer: 0.7 + st.handling * 0.1 };
+    game.lives = L.lives + (st.armor >= 5 ? 1 : 0);
+    game.z = 0;
+    game.invuln = 0;
+    game.nextRow = 70;
+    game.blockToast = -1;
+    setLevelWeather(L.night, L.rain);
+    posts.forEach(p => (p.g.position.x = p.wx));
+    mountains.forEach((m, i) => (m.wx = i * MTN_GAP));
+    save.lastMode = 'highway';
+    persist();
+    applyScene();
     hintEl.textContent = '← → кермо · ↑ газ · ↓ гальмо · C камера · P пауза';
     updateHud();
-    toast(L.name + ': поїхали!');
+    toast(`Рівень ${L.n}: доїдь до фінішу!`);
   }
 
   function pauseGame(on) {
@@ -1884,26 +2820,54 @@
     showOverlay(on ? pauseEl : null);
   }
 
-  function gameOver() {
+  function endRun() {
     game.running = false;
     car.visible = true;
     document.body.classList.remove('playing');
     frameView();
-    const score = Math.floor(game.dist) + game.coins * 25;
-    $('overTitle').textContent = 'Аварія!';
-    $('ol2').textContent = 'Проїхано';
-    $('ol3').textContent = 'Монет';
-    const prevBest = loadBest(game.level.id);
-    const record = score > prevBest;
-    if (record) saveBest(game.level.id, score);
-    $('overScore').textContent = fmt(score);
-    $('overLevel').textContent = game.level.name;
-    $('overDist').textContent = fmt(game.dist) + ' м';
-    $('overCoins').textContent = String(game.coins);
-    $('overBest').textContent = fmt(Math.max(score, prevBest));
-    $('overRecord').hidden = !record;
-    $('overQuip').textContent = QUIPS[Math.floor(Math.random() * QUIPS.length)];
-    setTimeout(() => { if (!game.running && mode === 'game') showOverlay(overEl); }, 900);
+  }
+
+  function gameOver() {
+    endRun();
+    const L = game.level;
+    const bonus = game.coins * 5;
+    save.money += bonus;
+    persist();
+    game.result = 'lose';
+    showResult({
+      title: 'Аварія!',
+      quip: QUIPS[Math.floor(Math.random() * QUIPS.length)],
+      big: `${fmt(game.dist)} м`,
+      rows: [['Рівень', L.n], ['До фінішу', `${fmt(Math.max(0, L.target - game.dist))} м`], ['Монети', `${game.coins} (+$ ${bonus})`], ['Гроші', `$ ${fmt(save.money)}`]],
+      again: 'Ще раз'
+    });
+  }
+
+  function levelComplete() {
+    endRun();
+    const L = game.level;
+    const before = cleared();
+    const bonus = game.coins * 5;
+    const reward = L.reward + bonus;
+    save.money += reward;
+    if (L.kind === 'highway') save.hw = Math.max(save.hw, L.n);
+    else save.off = Math.max(save.off, L.n);
+    persist();
+    game.result = 'win';
+    const last = (L.kind === 'highway' && L.n === HW_COUNT) || (L.kind === 'offroad' && L.n === OFF_COUNT);
+    game.lastWasFinal = last;
+    const rows = L.kind === 'highway'
+      ? [['Рівень', L.n], ['Монети', game.coins], ['Нагорода', `$ ${fmt(reward)}`], ['Гроші', `$ ${fmt(save.money)}`]]
+      : [['Рівень', L.n], ['Час', fmtTime(game.time)], ['Застрягань', game.stuckCount], ['Гроші', `$ ${fmt(save.money)}`]];
+    const unlocked = before < 100 && cleared() >= 100;
+    showResult({
+      title: `Рівень ${L.n} пройдено!`,
+      quip: WIN_QUIPS[Math.floor(Math.random() * WIN_QUIPS.length)],
+      big: `+$ ${fmt(reward)}`,
+      rows,
+      note: unlocked ? 'Відкрито монстр-траки! Купуйте їх у гаражі.' : last ? 'Це був останній рівень. Ви легенда!' : '',
+      again: last ? 'Ще раз' : 'Наступний рівень'
+    });
   }
 
   let toastTimer = 0;
@@ -1911,18 +2875,22 @@
     toastEl.textContent = text;
     toastEl.classList.add('on');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastEl.classList.remove('on'), 900);
+    toastTimer = setTimeout(() => toastEl.classList.remove('on'), 1100);
   }
 
   function updateHud() {
+    hSpeed.textContent = String(Math.round(Math.abs(game.speed) * 3.6));
     if (game.kind === 'offroad') {
-      hDist.textContent = `${game.flag}/${OFF_ROUTE.length}`;
-      hSpeed.textContent = String(Math.round(Math.abs(game.speed) * 3.6));
-      hCoins.textContent = fmtTime(game.time);
+      hDist.textContent = `${game.flag}/${OFF.cfg.route.length}`;
+      hCoins.textContent = fmtTime(Math.max(0, game.timeLeft));
       return;
     }
-    hDist.textContent = fmt(game.dist);
-    hSpeed.textContent = String(Math.round(game.speed * 3.6));
+    if (game.kind === 'world') {
+      hDist.textContent = `$ ${fmt(save.money)}`;
+      hCoins.textContent = game.area || '';
+      return;
+    }
+    hDist.textContent = fmt(Math.max(0, game.level.target - game.dist));
     hCoins.textContent = String(game.coins);
     hLives.textContent = game.lives > 0 ? '♥'.repeat(game.lives) : '—';
   }
@@ -1937,8 +2905,42 @@
 
   const rand = (a, b) => a + Math.random() * (b - a);
 
+  function spawnBlock(wx) {
+    const open = Math.floor(Math.random() * 3);
+    [0, 1, 2].forEach(li => {
+      if (li === open) return;
+      const b = acquire(barrierPool);
+      if (b) {
+        Object.assign(b, { type: 'block', wx, z: LANES[li], hl: 0.3, hw: 1.35 });
+        b.obj.position.set(0, 0, LANES[li]);
+        game.items.push(b);
+      }
+      const p = acquire(policePool);
+      if (p) {
+        Object.assign(p, { type: 'pcar', wx: wx + 7, z: LANES[li], targetZ: LANES[li], tSpeed: 0, hl: 1.7, hw: 1.5, changeAt: -1, roll: 0 });
+        p.obj.position.set(0, 0, LANES[li]);
+        p.obj.rotation.y = (li === 0 ? 1 : -1) * 0.7;
+        game.items.push(p);
+      }
+    });
+    game.blockToast = wx;
+  }
+
+  function spawnPolice() {
+    const p = acquire(policePool);
+    if (!p) return;
+    const li = Math.floor(Math.random() * 3);
+    Object.assign(p, { type: 'police', wx: game.dist - 38, z: LANES[li], targetZ: LANES[li], tSpeed: game.speed + 7, hl: p.model.hl, hw: p.model.hw, changeAt: -1, roll: 0, phase: 'chase', t: 0 });
+    p.obj.position.set(-38, 0, LANES[li]);
+    p.obj.rotation.y = 0;
+    game.items.push(p);
+    toast('Поліція позаду! Не дай себе підрізати');
+  }
+
   function spawnRow(wx) {
     const L = game.level;
+    game.rowCount += 1;
+    if (L.blockEvery && game.rowCount > 2 && game.rowCount % L.blockEvery === 0) { spawnBlock(wx); return; }
     const lanes = [0, 1, 2].sort(() => Math.random() - 0.5);
     const nTraffic = Math.random() < L.double ? 2 : 1;
     const used = lanes.slice(0, nTraffic);
@@ -1958,7 +2960,6 @@
       game.items.push(t);
     });
     const free = lanes.slice(nTraffic);
-    // a cone only when it still leaves a clear lane
     if (nTraffic === 1 && Math.random() < L.cones) {
       const li = free.shift();
       const c = acquire(conePool);
@@ -1979,6 +2980,7 @@
         game.items.push(c);
       }
     }
+    if (L.police && Math.random() < L.police && !game.items.some(i => i.type === 'police')) spawnPolice();
   }
 
   function hit(it) {
@@ -1987,8 +2989,8 @@
     game.invuln = 1.8;
     game.shake = 0.5;
     game.speed *= 0.5;
-    if (it.type === 'cone') { it.obj.visible = false; }
-    else { it.wx += 5; }
+    if (it.type === 'cone') it.obj.visible = false;
+    else if (it.type === 'car' || it.type === 'police') it.wx += 5;
     flashEl.classList.add('on');
     requestAnimationFrame(() => requestAnimationFrame(() => flashEl.classList.remove('on')));
     if (navigator.vibrate) { try { navigator.vibrate(120); } catch (e) { /* not allowed */ } }
@@ -1997,19 +2999,20 @@
     else toast(game.lives === 1 ? 'Останнє життя!' : 'Бам! Залишилось життів: ' + game.lives);
   }
 
+  function nearestLane(z) { return LANES.reduce((a, b) => (Math.abs(b - z) < Math.abs(a - z) ? b : a)); }
+
   function updateGame(dt) {
     const L = game.level;
-    // speed: grows with distance, gas and brake bend it
+    const grip = state.rain ? 0.85 : 1;
     const base = Math.min(L.max, L.start + game.dist * L.ramp) * game.mods.speed;
     const target = base * (input.gas ? game.mods.gas : 1) * (input.brake ? 0.45 : 1);
-    game.speed += (target - game.speed) * Math.min(1, dt * (input.brake ? 2.2 : 0.9));
+    game.speed += (target - game.speed) * Math.min(1, dt * (input.brake ? 2.2 * grip : 0.9));
     game.dist += game.speed * dt;
 
-    // steering
     const steerIn = (input.right ? 1 : 0) - (input.left ? 1 : 0);
     game.steer += (steerIn - game.steer) * Math.min(1, dt * 8);
-    const steerRate = (7 + game.speed * 0.08) * game.mods.steer;
-    game.vz += (game.steer * steerRate - game.vz) * Math.min(1, dt * 6);
+    const steerRate = (7 + game.speed * 0.08) * game.mods.steer * grip;
+    game.vz += (game.steer * steerRate - game.vz) * Math.min(1, dt * 6 * grip);
     game.z += game.vz * dt;
     const lim = ROAD_HALF - heroModel().hw - 0.05;
     if (Math.abs(game.z) > lim) { game.z = Math.sign(game.z) * lim; game.vz *= -0.2; game.shake = Math.max(game.shake, 0.08); }
@@ -2019,17 +3022,32 @@
     game.invuln = Math.max(0, game.invuln - dt);
     car.visible = game.invuln > 0 ? Math.floor(game.invuln * 10) % 2 === 0 : true;
     game.shake = Math.max(0, game.shake - dt * 1.2);
+    const flash = Math.floor(elapsed * 6) % 2;
+    polRed.emissiveIntensity = flash ? 3 : 0.2;
+    polBlue.emissiveIntensity = flash ? 0.2 : 3;
 
-    // spawn rows ahead
-    while (game.nextRow < game.dist + 150) {
+    while (game.nextRow < game.dist + 150 && game.nextRow < L.target + 60) {
       spawnRow(game.nextRow);
       game.nextRow += rand(L.gap[0], L.gap[1]);
     }
+    if (game.blockToast > 0 && game.blockToast - game.dist < 110) { toast('Перекриття! Шукай вільну смугу'); game.blockToast = -1; }
 
-    // move world items
+    const hm = heroModel();
     for (let i = game.items.length - 1; i >= 0; i--) {
       const it = game.items[i];
-      if (it.type === 'car') {
+      if (it.type === 'police') {
+        it.t += dt;
+        const rel = it.wx - game.dist;
+        if (it.phase === 'chase') {
+          it.tSpeed = game.speed + 7;
+          if (rel > -22 && rel < 8) it.targetZ = nearestLane(game.z);
+          if (rel > 24) { it.phase = 'block'; it.t = 0; }
+        } else if (it.phase === 'block') {
+          it.tSpeed = game.speed * 0.82;
+          if (it.t > 5) it.phase = 'leave';
+        } else it.tSpeed = game.speed + 14;
+      }
+      if (it.type === 'car' || it.type === 'police' || it.type === 'pcar') {
         it.wx += it.tSpeed * dt;
         it.roll -= (it.tSpeed * dt) / it.model.wheelR;
         it.spins.forEach(sp => (sp.rotation.z = it.roll));
@@ -2040,23 +3058,24 @@
           it.targetZ = LANES[opts[Math.floor(Math.random() * opts.length)]];
           it.changeAt = -1;
         }
-        const dz = it.targetZ - it.z;
-        const step = Math.sign(dz) * Math.min(Math.abs(dz), 2.4 * dt);
-        it.z += step;
-        it.obj.rotation.y = -step / Math.max(dt, 1e-4) * 0.03;
-        it.obj.position.z = it.z;
+        if (it.type !== 'pcar') {
+          const dz = it.targetZ - it.z;
+          const step = Math.sign(dz) * Math.min(Math.abs(dz), (it.type === 'police' ? 3.2 : 2.4) * dt);
+          it.z += step;
+          it.obj.rotation.y = -step / Math.max(dt, 1e-4) * 0.03;
+          it.obj.position.z = it.z;
+        }
       } else if (it.type === 'coin') {
         it.obj.rotation.y += dt * 4;
       }
       const x = it.wx - game.dist;
       it.obj.position.x = x;
-      if (!it.obj.visible || x < -25 || x > 220) {
+      const behind = it.type === 'police' ? -70 : -25;
+      if (!it.obj.visible || x < behind || x > 230) {
         it.obj.visible = false;
         game.items.splice(i, 1);
         continue;
       }
-      // collisions (boxes from each model's footprint)
-      const hm = heroModel();
       if (Math.abs(x) < hm.hl + it.hl && Math.abs(it.z - game.z) < hm.hw + it.hw) {
         if (it.type === 'coin') {
           it.obj.visible = false;
@@ -2068,157 +3087,218 @@
       }
     }
 
-    // roadside posts recycle
     posts.forEach(p => {
       let x = p.wx - game.dist;
       if (x < -30) { p.wx += POST_GAP * POST_COUNT; x = p.wx - game.dist; }
       p.g.position.x = x;
     });
+    mountains.forEach(m => {
+      let x = m.wx - game.dist;
+      if (x < -160) { m.wx += MTN_GAP * MTN_COUNT; x = m.wx - game.dist; }
+      m.g.position.x = x;
+    });
     updateHud();
+    if (game.dist >= L.target) levelComplete();
   }
 
-  // ---------- Off-road game ----------
+  // ---------- Free driving: off-road levels and the open world ----------
   const awdBtn = $('awdBtn');
   function setAwd(on) {
     game.awd = on;
     awdBtn.setAttribute('aria-pressed', String(on));
   }
   awdBtn.addEventListener('click', e => { e.currentTarget.blur(); setAwd(!game.awd); toast(game.awd ? 'Повний привід увімкнено' : 'Повний привід вимкнено'); });
+  let FD = { h: () => 0, surf: () => null, colliders: [], boxes: [], limX: 100, limZ: 100, parts: null };
+  const isFree = () => game.kind === 'offroad' || game.kind === 'world';
 
-  function startOffroad() {
-    buildOffroad();
-    game.kind = 'offroad';
-    if (game.forcedNight) { state.night = false; game.forcedNight = false; }
-    game.running = true;
-    game.paused = false;
-    game.speed = 0; game.wheelSpeed = 0; game.steer = 0; game.vz = 0; game.shake = 0;
-    game.heading = 0; game.time = 0; game.flag = 0; game.stuckCount = 0; game.stuckShown = false; game.stuckT = 0;
-    game.up = new THREE.Vector3(0, 1, 0);
+  function beginFree(x, z, heading) {
+    game.speed = 0; game.wheelSpeed = 0; game.heading = heading;
+    game.time = 0; game.stuckCount = 0; game.stuckShown = false; game.stuckT = 0;
+    game.up.set(0, 1, 0);
     game.camInit = false;
-    const st = computeStats(heroModel(), garage.tuning);
-    game.st = st;
+    game.safe = { x, z, heading, t: 0 };
+    game.st = computeStats(heroModel(), garage.tuning);
     setAwd(false);
-    clearItems();
-    resetCar();
-    car.position.set(0, offH(0, 0), 0);
-    OFF.flagObjs.forEach(f => { f.g.visible = true; });
-    refreshFlags();
-    $('hDistL').textContent = 'прапорці';
-    $('hCoinsL').textContent = 'час';
+    car.position.set(x, FD.h(x, z), z);
+    trailer.yaw = heading;
     applyScene();
-    showOverlay(null);
-    document.body.classList.add('playing');
-    frameView();
     hintEl.textContent = '← → кермо · ↑ газ · ↓ гальмо й задній хід · F повний привід · C камера';
-    updateHud();
     if (current.id !== 'g-chase') setCam('g-chase');
-    toast('Знайди всі прапорці!');
+  }
+
+  function startOffLevel(n) {
+    if (mode !== 'game') enterGame(true);
+    buildOffLevel(n);
+    beginRun('offroad');
+    const C = OFF.cfg;
+    game.level = { kind: 'offroad', n, name: `Бездоріжжя ${n}`, reward: C.reward };
+    FD = { h: offH, surf: offSurf, colliders: OFF.colliders, boxes: [], limX: OFF_LIMIT, limZ: OFF_LIMIT, parts: OFF.parts };
+    game.flag = 0;
+    game.timeLeft = C.timeLimit;
+    setLevelWeather(C.night, C.rain);
+    $('hDistL').textContent = 'прапорці';
+    $('hCoinsL').textContent = 'залишилось';
+    save.lastMode = 'offroad';
+    persist();
+    beginFree(0, 0, Math.atan2(-C.route[0][1], C.route[0][0]));
+    refreshFlags();
+    updateHud();
+    toast(`Рівень ${n}: збери ${C.route.length} прапорців`);
+  }
+
+  function startWorld() {
+    if (mode !== 'game') enterGame(true);
+    buildWorld();
+    beginRun('world');
+    game.level = { kind: 'world', n: 0, name: 'Відкритий світ', reward: 0 };
+    FD = { h: worldH, surf: worldSurf, colliders: WORLD.colliders, boxes: WORLD.boxes, limX: W_LX, limZ: W_LZ, parts: WORLD.parts };
+    state.night = userWeather.night;
+    state.rain = userWeather.rain;
+    $('hDistL').textContent = 'гроші';
+    $('hCoinsL').textContent = 'де ви';
+    save.lastMode = 'world';
+    persist();
+    beginFree(-60, -2.6, 0);
+    updateHud();
+    toast('Відкритий світ: катайтеся й збирайте долари');
   }
 
   function refreshFlags() {
+    const total = OFF.cfg.route.length;
     OFF.flagObjs.forEach((f, i) => {
       f.ring.visible = i === game.flag;
       f.g.visible = i >= game.flag;
-      if (i < OFF_ROUTE.length - 1) f.clothMat.emissiveIntensity = i === game.flag ? 0.8 : 0.15;
+      if (i < total - 1) f.clothMat.emissiveIntensity = i === game.flag ? 0.8 : 0.15;
     });
   }
 
-  function finishOffroad() {
-    game.running = false;
-    document.body.classList.remove('playing');
-    frameView();
-    const t = game.time;
-    const prev = loadBest('offroad');
-    const record = !prev || t < prev;
-    if (record) saveBest('offroad', t);
-    $('overTitle').textContent = 'Фініш!';
-    $('overQuip').textContent = game.stuckCount === 0 ? 'Жодного разу не застрягли. Болото розчароване.' : `Застрягали ${game.stuckCount} раз. Трактор не знадобився, і то добре.`;
-    $('overScore').textContent = fmtTime(t);
-    $('overLevel').textContent = 'Лісові болота';
-    $('ol2').textContent = 'Машина';
-    $('overDist').textContent = heroModel().name;
-    $('ol3').textContent = 'Застрягань';
-    $('overCoins').textContent = String(game.stuckCount);
-    $('overBest').textContent = fmtTime(record ? t : prev);
-    $('overRecord').hidden = !record;
-    setTimeout(() => { if (!game.running && mode === 'game') showOverlay(overEl); }, 700);
+  function timeUp() {
+    endRun();
+    game.result = 'lose';
+    showResult({
+      title: 'Час вийшов!',
+      quip: game.stuckCount ? 'Болото сьогодні виграло. Спробуйте з повним приводом.' : 'Трохи не встигли. Наступного разу газуйте сміливіше.',
+      big: `${game.flag}/${OFF.cfg.route.length}`,
+      rows: [['Рівень', game.level.n], ['Прапорців', `${game.flag} з ${OFF.cfg.route.length}`], ['Застрягань', game.stuckCount], ['Гроші', `$ ${fmt(save.money)}`]],
+      again: 'Ще раз'
+    });
   }
 
   const offNormal = new THREE.Vector3(), offBasis = new THREE.Matrix4(), offX = new THREE.Vector3(), offZ = new THREE.Vector3();
-  function updateOffroad(dt) {
+  const wheelWorld = new THREE.Vector3();
+  function updateFreeDrive(dt) {
     const s = heroModel(), st = game.st;
+    const grip = state.rain ? 0.85 : 1;
     game.time += dt;
     const steerIn = (input.right ? 1 : 0) - (input.left ? 1 : 0);
     game.steer += (steerIn - game.steer) * Math.min(1, dt * 6);
     const px = car.position.x, pz = car.position.z;
-    const mud = mudAt(px, pz);
+    const surf = FD.surf(px, pz);
     const clearance = s.bottom + heroRide;
     let stuck = false, limit = 1;
-    if (mud) {
-      const needsAwd = mud.d > clearance * 0.7;
-      const tooDeep = mud.d > clearance + 0.06;
+    if (surf) {
+      const needsAwd = surf.d > clearance * 0.7;
+      const tooDeep = surf.d > clearance + 0.06;
       stuck = tooDeep || (needsAwd && !game.awd);
-      limit = game.awd ? 0.5 : 0.32;
+      limit = (game.awd ? 0.5 : 0.32) * (surf.type === 'water' ? 0.85 : 1);
+      if (surf.type === 'water' && surf.d > clearance + 0.55) { drown(); return; }
+    } else {
+      game.safe.t += dt;
+      if (game.safe.t > 0.5) game.safe = { x: px, z: pz, heading: game.heading, t: 0 };
     }
-    const maxF = (11 + st.speed * 2.2) * (game.awd ? 0.92 : 1);
+    const maxF = (11 + st.speed * 2.2) * (game.awd ? 0.92 : 1) * (game.kind === 'world' ? 1.6 : 1);
     let target = 0;
     if (input.gas) target = maxF * limit;
-    else if (input.brake) target = game.speed > 0.5 ? 0 : -6 * (mud ? 0.5 : 1);
+    else if (input.brake) target = game.speed > 0.5 ? 0 : -6 * (surf ? 0.5 : 1);
     if (stuck && target > 0) target = 0;
     if (stuck && target < 0) target = -1.4;
     const braking = input.brake && game.speed > 0.5;
-    const rate = stuck ? 4 : braking ? 3.5 : target === 0 ? 1.2 : 1.6;
-    game.speed += (target - game.speed) * Math.min(1, dt * rate * (mud ? 0.7 : 1));
-    // gravity along the slope; 4×4 climbs better
+    const rate = stuck ? 4 : braking ? 3.5 * grip : target === 0 ? 1.2 : 1.6;
+    game.speed += (target - game.speed) * Math.min(1, dt * rate * (surf ? 0.7 : 1));
     const f = offFwd.set(Math.cos(game.heading), 0, -Math.sin(game.heading));
-    const slope = (offH(px + f.x, pz + f.z) - offH(px - f.x, pz - f.z)) / 2;
+    const slope = (FD.h(px + f.x, pz + f.z) - FD.h(px - f.x, pz - f.z)) / 2;
     game.speed -= slope * (game.awd ? 3 : 6) * dt;
-    // steering
-    const turn = (0.75 + st.handling * 0.12) * Math.max(-1, Math.min(1, game.speed / 5));
+    const turn = (0.75 + st.handling * 0.12) * grip * Math.max(-1, Math.min(1, game.speed / 5));
     game.heading -= game.steer * turn * dt;
     let nx = px + f.x * game.speed * dt, nz = pz + f.z * game.speed * dt;
-    // trees and rocks
-    for (const t of OFF.trees) {
-      const dx = nx - t.x, dz = nz - t.z, d = Math.hypot(dx, dz), min = t.r + s.hw * 0.9;
-      if (d < min) {
-        nx = t.x + (dx / d) * min; nz = t.z + (dz / d) * min;
-        if (Math.abs(game.speed) > 3) { game.shake = 0.35; toast('Бум! Дерево перемогло.'); }
-        game.speed *= -0.25;
+    const rad = s.hw * 0.95;
+    let bumped = false;
+    for (const t of FD.colliders) {
+      const dx = nx - t.x, dz = nz - t.z;
+      if (Math.abs(dx) > 4 || Math.abs(dz) > 4) continue;
+      const d = Math.hypot(dx, dz) || 0.001, min = t.r + rad;
+      if (d < min) { nx = t.x + (dx / d) * min; nz = t.z + (dz / d) * min; bumped = true; }
+    }
+    for (const b of FD.boxes) {
+      const cx = Math.max(b.x - b.hx, Math.min(nx, b.x + b.hx)), cz = Math.max(b.z - b.hz, Math.min(nz, b.z + b.hz));
+      const dx = nx - cx, dz = nz - cz;
+      if (Math.abs(dx) > rad + 0.1 || Math.abs(dz) > rad + 0.1) continue;
+      const d = Math.hypot(dx, dz);
+      if (d < rad) {
+        if (d < 1e-4) { nx = px; nz = pz; } else { nx = cx + (dx / d) * rad; nz = cz + (dz / d) * rad; }
+        bumped = true;
       }
     }
-    if (Math.abs(nx) > OFF_LIMIT || Math.abs(nz) > OFF_LIMIT) {
-      nx = Math.max(-OFF_LIMIT, Math.min(OFF_LIMIT, nx)); nz = Math.max(-OFF_LIMIT, Math.min(OFF_LIMIT, nz));
+    if (bumped) {
+      if (Math.abs(game.speed) > 4) { game.shake = 0.35; toast(game.kind === 'world' ? 'Бум! Обережніше з містом.' : 'Бум! Дерево перемогло.'); }
+      game.speed *= -0.25;
+    }
+    if (Math.abs(nx) > FD.limX || Math.abs(nz) > FD.limZ) {
+      nx = Math.max(-FD.limX, Math.min(FD.limX, nx)); nz = Math.max(-FD.limZ, Math.min(FD.limZ, nz));
       game.speed *= -0.2;
     }
+    // world traffic
+    if (game.kind === 'world') {
+      WORLD.cars.forEach(c => {
+        c.x += c.dir * c.v * dt;
+        if (c.x > 900) c.x = -900; else if (c.x < -900) c.x = 900;
+        c.obj.position.set(c.x, 0.03, c.z);
+        c.roll -= (c.v * dt) / c.model.wheelR;
+        c.spins.forEach(sp => (sp.rotation.z = c.roll));
+        const dx = nx - c.x, dz = nz - c.z, d = Math.hypot(dx, dz);
+        if (d < 2.6) {
+          nx = c.x + (dx / (d || 1)) * 2.6; nz = c.z + (dz / (d || 1)) * 2.6;
+          if (Math.abs(game.speed) > 3) { game.shake = 0.4; toast('Обережно! Це чужа машина.'); }
+          game.speed *= -0.3;
+        }
+      });
+    }
     // pose on the terrain
-    const y = offH(nx, nz);
-    offNormal.set(offH(nx - 1, nz) - offH(nx + 1, nz), 2, offH(nx, nz - 1) - offH(nx, nz + 1)).normalize();
+    const y = FD.h(nx, nz);
+    offNormal.set(FD.h(nx - 1, nz) - FD.h(nx + 1, nz), 2, FD.h(nx, nz - 1) - FD.h(nx, nz + 1)).normalize();
     game.up.lerp(offNormal, Math.min(1, dt * 6)).normalize();
     offZ.crossVectors(f, game.up).normalize();
     offX.crossVectors(game.up, offZ);
     offBasis.makeBasis(offX, game.up, offZ);
     car.quaternion.setFromRotationMatrix(offBasis);
     car.position.set(nx, y, nz);
-    wheels.forEach(w => { if (w.front) w.group.rotation.y = -game.steer * 0.4; });
+    // each wheel follows the ground within its suspension travel
+    car.updateMatrixWorld();
+    const travel = suspTravel();
+    wheels.forEach(w => {
+      if (w.front) w.group.rotation.y = -game.steer * 0.4;
+      car.localToWorld(wheelWorld.set(w.group.position.x, 0, w.group.position.z));
+      const off = Math.max(-travel, Math.min(travel, FD.h(wheelWorld.x, wheelWorld.z) - wheelWorld.y));
+      w.group.position.y = s.wheelR + off;
+    });
     game.vz = game.steer * Math.abs(game.speed) * 0.4;
     game.shake = Math.max(0, game.shake - dt * 1.2);
 
-    // wheels spin in place when stuck; mud flies
     const spinning = stuck && input.gas;
     game.wheelSpeed = spinning ? 14 : game.speed;
-    if (mud && (spinning || Math.abs(game.speed) > 1.5) && Math.random() < 0.9) {
+    if (surf && (spinning || Math.abs(game.speed) > 1.5) && FD.parts) {
       [-1, 1].forEach(side => {
         car.localToWorld(tmpLocal.set(s.rearX, 0.1, side * s.track));
-        sprayMud(tmpLocal.x, mud.surface + 0.05, tmpLocal.z, f.x * Math.sign(game.wheelSpeed || 1), f.z * Math.sign(game.wheelSpeed || 1));
+        sprayAt(FD.parts, tmpLocal.x, surf.surface + 0.05, tmpLocal.z, f.x * Math.sign(game.wheelSpeed || 1), f.z * Math.sign(game.wheelSpeed || 1), surf.type === 'water');
       });
     }
-    updateSpray(dt);
+    if (FD.parts) updateSprayP(FD.parts, dt);
     if (spinning) {
       game.stuckT += dt;
       if (game.stuckT > 0.6 && !game.stuckShown) {
         game.stuckShown = true;
         game.stuckCount += 1;
-        const deep = mud.d > clearance + 0.06;
+        const deep = surf.d > clearance + 0.06;
         toast(deep ? 'Застрягли! Тут потрібен джип. Здайте назад (↓)' : 'Застрягли! Увімкніть повний привід (F)');
       }
     } else if (!stuck) {
@@ -2226,19 +3306,95 @@
       game.stuckShown = false;
     }
 
-    // flags + guide arrow
-    const [fx, fz] = OFF_ROUTE[game.flag];
-    if (Math.hypot(nx - fx, nz - fz) < 5) {
-      game.flag += 1;
-      if (game.flag >= OFF_ROUTE.length) { refreshFlags(); updateHud(); finishOffroad(); return; }
-      refreshFlags();
-      toast(game.flag === OFF_ROUTE.length - 1 ? 'Останній: до фінішу!' : `Прапорець ${game.flag} з ${OFF_ROUTE.length}`);
+    if (game.kind === 'offroad') {
+      game.timeLeft -= dt;
+      if (game.timeLeft <= 0) { updateHud(); timeUp(); return; }
+      const route = OFF.cfg.route;
+      const [fx, fz] = route[game.flag];
+      if (Math.hypot(nx - fx, nz - fz) < 5) {
+        game.flag += 1;
+        if (game.flag >= route.length) { refreshFlags(); updateHud(); levelComplete(); return; }
+        refreshFlags();
+        toast(game.flag === route.length - 1 ? 'Останній: до фінішу!' : `Прапорець ${game.flag} з ${route.length}`);
+      }
+      const [tx, tz] = route[game.flag];
+      OFF.arrow.position.set(nx, y + s.roofY + 0.55, nz);
+      OFF.arrow.rotation.set(0, Math.atan2(-(tz - nz), tx - nx), 0);
+      OFF.flagObjs[game.flag].cloth.rotation.y = Math.PI / 2 + Math.sin(elapsed * 4) * 0.15;
+    } else {
+      // dollars
+      for (const p of WORLD.pickups) {
+        if (!p.m.visible) {
+          p.t -= dt;
+          if (p.t <= 0) p.m.visible = true;
+          continue;
+        }
+        p.m.rotation.y += dt * 3;
+        if (Math.abs(p.x - nx) < 2.4 && Math.abs(p.z - nz) < 2.4) {
+          p.m.visible = false;
+          p.t = 60;
+          save.money += 25;
+          persist();
+          toast('+$ 25');
+        }
+      }
+      const town = inTown(nx, nz);
+      const area = town ? town.name : Math.abs(nz) < 10 ? 'Траса' : FD.surf(nx, nz) ? 'Річка' : y > 10 ? 'Гори' : 'Ліс';
+      if (area !== game.area) { game.area = area; if (town) toast(`Ласкаво просимо до міста ${town.name}!`); }
     }
-    const [tx, tz] = OFF_ROUTE[game.flag];
-    OFF.arrow.position.set(nx, y + s.roofY + 0.55, nz);
-    OFF.arrow.rotation.set(0, Math.atan2(-(tz - nz), tx - nx), 0);
-    OFF.flagObjs[game.flag].cloth.rotation.y = Math.PI / 2 + Math.sin(elapsed * 4) * 0.15;
     updateHud();
+  }
+
+  function drown() {
+    game.speed = 0;
+    game.shake = 0.5;
+    const sp = game.safe;
+    car.position.set(sp.x, FD.h(sp.x, sp.z), sp.z);
+    game.heading = sp.heading + Math.PI;
+    trailer.yaw = game.heading;
+    game.camInit = false;
+    if (game.kind === 'offroad') game.timeLeft -= 10;
+    toast(game.kind === 'offroad' ? 'Машину залило водою! Шукайте брід (−10 с)' : 'Машину залило водою! Їдьте мостом');
+  }
+
+  // ---------- Suspension check ----------
+  function suspTravel() {
+    const s = heroModel(), r = garage.tuning.ride;
+    if (s.monster) return 0.34;
+    return r === 'low' ? 0.05 : r === 'high' ? 0.16 : s.bottom > 0.45 ? 0.13 : 0.09;
+  }
+  let suspTest = null;
+  function startSuspTest() {
+    if (mode !== 'studio') return;
+    suspTest = { t: 0 };
+    setCam('side');
+    toast('Перевіряємо підвіску: колеса по черзі наїжджають на горби');
+  }
+  function updateSuspTest(dt) {
+    if (!suspTest) return;
+    suspTest.t += dt;
+    const t = suspTest.t, s = heroModel(), amp = suspTravel();
+    const wb = s.frontX - s.rearX;
+    let fl = 0, rl = 0, lsum = 0, rsum = 0;
+    wheels.forEach(w => {
+      const x = w.group.position.x, side = Math.sign(w.group.position.z);
+      const ph = t * 1.4 - (s.frontX - x) / wb * 0.55 - (t > 2.6 && side > 0 ? 0.25 : 0);
+      const off = ph > 0 && ph < 3 ? amp * Math.max(0, Math.sin(ph * Math.PI * 2)) : 0;
+      w.group.position.y = s.wheelR + off;
+      if (w.front) fl += off; else rl += off;
+      if (side > 0) rsum += off; else lsum += off;
+    });
+    body.position.y = heroRide + (fl + rl) / 4 * 0.7;
+    body.rotation.z = (fl - rl) / 2 / wb * 0.7;
+    body.rotation.x = -(rsum - lsum) / 2 / (s.track * 2) * 0.7;
+    if (t > 4.8) {
+      wheels.forEach(w => (w.group.position.y = s.wheelR));
+      body.rotation.set(0, 0, 0);
+      const r = garage.tuning.ride;
+      const kind = s.monster ? 'монстр-хід, перескочить будь-що' : r === 'low' ? 'жорстка, для рівного асфальту' : r === 'high' ? 'м’яка, для бездоріжжя' : s.bottom > 0.45 ? 'позашляхова, ями не страшні' : 'збалансована, для міста й траси';
+      toast(`Підвіска в нормі: хід ±${Math.round(amp * 100)} см, ${kind}`);
+      suspTest = null;
+    }
   }
 
   // ---------- Input ----------
@@ -2254,7 +3410,7 @@
         setCam(CAMS[(i + 1) % CAMS.length].id);
         return;
       }
-      if (e.code === 'KeyF' && game.kind === 'offroad' && game.running) { setAwd(!game.awd); toast(game.awd ? 'Повний привід увімкнено' : 'Повний привід вимкнено'); return; }
+      if (e.code === 'KeyF' && isFree() && game.running) { setAwd(!game.awd); toast(game.awd ? 'Повний привід увімкнено' : 'Повний привід вимкнено'); return; }
       if (e.code === 'Enter' && !overEl.hidden) { restart(); return; }
     }
     const n = parseInt(e.key, 10);
@@ -2280,14 +3436,55 @@
   });
 
   modeBtn.addEventListener('click', () => { modeBtn.blur(); mode === 'game' ? exitGame() : enterGame(); });
+  $('menuBtn').addEventListener('click', e => { e.currentTarget.blur(); showIntro(); });
+  $('pauseHomeBtn').addEventListener('click', showIntro);
+  function showIntro() {
+    if (mode === 'game') exitGame();
+    garage.preview && clearPreview();
+    introEl.hidden = false;
+    document.body.classList.add('intro-on');
+    frameView();
+    const nextHw = Math.min(HW_COUNT, save.hw + 1), nextOff = Math.min(OFF_COUNT, save.off + 1);
+    $('introMoney').textContent = `$ ${fmt(save.money)} · пройдено ${cleared()} з ${HW_COUNT + OFF_COUNT} рівнів`;
+    $('iContinueSub').textContent = save.lastMode === 'offroad' ? `Бездоріжжя · рівень ${nextOff}` : save.lastMode === 'world' ? 'Відкритий світ' : `Шосе · рівень ${nextHw}`;
+    setCam('cine');
+  }
+  function hideIntro() {
+    introEl.hidden = true;
+    document.body.classList.remove('intro-on');
+    frameView();
+  }
+  $('iContinue').addEventListener('click', () => {
+    hideIntro();
+    if (save.lastMode === 'offroad') startOffLevel(Math.min(OFF_COUNT, save.off + 1));
+    else if (save.lastMode === 'world') startWorld();
+    else startHwLevel(Math.min(HW_COUNT, save.hw + 1));
+  });
+  $('iLevels').addEventListener('click', () => { hideIntro(); enterGame(); });
+  const openGarageAt = id => {
+    hideIntro();
+    setGarageOpen(true);
+    setCam('front');
+    requestAnimationFrame(() => document.getElementById(id).scrollIntoView({ block: 'start', behavior: reduceMotion ? 'auto' : 'smooth' }));
+  };
+  $('iCars').addEventListener('click', () => openGarageAt('carsSection'));
+  $('iTune').addEventListener('click', () => openGarageAt('tuneSection'));
+  $('iStudio').addEventListener('click', () => { hideIntro(); setCam('free'); });
   $('pauseBtn').addEventListener('click', e => { e.currentTarget.blur(); pauseGame(true); });
   $('resumeBtn').addEventListener('click', () => pauseGame(false));
   $('pauseMenuBtn').addEventListener('click', openMenu);
-  function restart() { if (game.kind === 'offroad') startOffroad(); else if (game.level) startGame(game.level); }
+  function restart() {
+    const L = game.level;
+    if (!L) return;
+    const n = game.result === 'win' && !game.lastWasFinal ? L.n + 1 : L.n;
+    if (L.kind === 'offroad') startOffLevel(n);
+    else if (L.kind === 'world') startWorld();
+    else startHwLevel(n);
+  }
   $('againBtn').addEventListener('click', restart);
   $('overMenuBtn').addEventListener('click', openMenu);
-  $('toStudio1').addEventListener('click', exitGame);
-  $('toStudio2').addEventListener('click', exitGame);
+  $('toStudio1').addEventListener('click', showIntro);
+  $('toStudio2').addEventListener('click', showIntro);
 
   // ---------- Resize ----------
   function resize() {
@@ -2313,8 +3510,8 @@
     elapsed += dt;
 
     const playing = mode === 'game' && game.running && !game.paused;
-    if (playing) { if (game.kind === 'offroad') updateOffroad(dt); else updateGame(dt); }
-    if (mode === 'game' && game.kind === 'offroad') {
+    if (playing) { if (isFree()) updateFreeDrive(dt); else updateGame(dt); }
+    if (mode === 'game' && isFree()) {
       sun.position.set(car.position.x + 12, car.position.y + 24, car.position.z + 9);
       sun.target.position.copy(car.position);
     } else {
@@ -2324,7 +3521,7 @@
     if (!playing && mode === 'game' && !game.paused) game.shake = Math.max(0, game.shake - dt * 1.2);
 
     // driving: wheels roll, ground flows, body breathes on the suspension
-    const speed = playing ? (game.kind === 'offroad' ? game.wheelSpeed : game.speed) : (mode === 'studio' && state.drive ? 16 : 0); // m/s
+    const speed = playing ? (isFree() ? game.wheelSpeed : game.speed) : (mode === 'studio' && state.drive ? 16 : 0); // m/s
     const dist = speed * dt;
     roll -= dist / heroModel().wheelR;
     wheels.forEach(w => (w.spin.rotation.z = roll));
@@ -2333,6 +3530,9 @@
     const moving = Math.abs(speed) > 0.3;
     body.position.y = heroRide + (moving ? Math.sin(elapsed * 9) * 0.006 + Math.sin(elapsed * 2.3) * 0.004 : 0);
     body.rotation.x = playing ? game.vz * 0.004 : (moving ? Math.sin(elapsed * 1.7) * 0.004 : 0);
+    if (mode === 'studio') updateSuspTest(dt);
+    updateRain(dt);
+    updateTrailer(dt, speed, mode === 'game' && isFree() ? FD.h : null);
 
     if (tween) {
       const k = Math.min((performance.now() - tween.t0) / tween.dur, 1);
@@ -2364,6 +3564,8 @@
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
+  renderGarage();
+  showIntro();
   requestAnimationFrame(frame);
   document.getElementById('loading').classList.add('done');
 })();
