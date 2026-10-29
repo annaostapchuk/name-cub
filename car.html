@@ -50,9 +50,41 @@
   }
 
   .side {
-    display: flex; flex-direction: column; gap: 12px; padding: 12px;
-    max-width: 220px;
+    display: flex; flex-direction: column; padding: 0;
+    width: 280px; max-width: 100%; box-sizing: border-box;
+    max-height: calc(100vh - 150px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    overflow: hidden;
   }
+  .garage-head {
+    display: flex; justify-content: space-between; align-items: center; width: 100%;
+    font: 700 14px var(--font-display); letter-spacing: 0.03em; color: var(--fg);
+    background: transparent; border: 0; padding: 12px 14px; cursor: pointer;
+  }
+  .garage-head .chev { transition: transform .2s ease; color: var(--muted); }
+  .garage-head[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+  .garage-body {
+    display: flex; flex-direction: column; gap: 16px; padding: 0 14px 14px;
+    overflow-y: auto; min-height: 0; scrollbar-width: thin;
+  }
+  .models { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .model {
+    text-align: left; font-family: var(--font-body); color: var(--fg); cursor: pointer;
+    background: rgba(255, 255, 255, 0.03); border: 1px solid var(--line); border-radius: 10px;
+    padding: 8px 9px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .model b { font-size: 13px; }
+  .model span { font-size: 11px; color: var(--muted); line-height: 1.3; }
+  .model[aria-pressed="true"] { border-color: var(--accent); background: rgba(242, 179, 61, 0.12); }
+  .stats { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+  .stat-row { display: grid; grid-template-columns: 92px 1fr; align-items: center; font-size: 12px; gap: 8px; }
+  .bars { display: flex; gap: 3px; }
+  .bars i { flex: 1; height: 6px; border-radius: 3px; background: var(--line); }
+  .bars i.on { background: var(--accent); }
+  .stat-note { margin: 2px 0 0; font-size: 11px; color: var(--muted); }
+  .tuning { display: flex; flex-direction: column; gap: 10px; }
+  .tune { display: flex; flex-direction: column; gap: 5px; }
+  .tune-label { font-size: 12px; color: var(--fg); opacity: 0.85; }
+  .tune-actions { margin-top: 10px; }
   .label {
     font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
     color: var(--muted); margin: 0 0 8px;
@@ -213,8 +245,7 @@
     .stat { padding: 4px 8px; min-width: 0; }
     .stat b { font-size: 16px; }
     .top { flex-direction: column; }
-    .side { flex-direction: row; flex-wrap: wrap; max-width: none; width: 100%; box-sizing: border-box; }
-    .side > div { flex: 1 1 140px; }
+    .side { width: 100%; max-height: calc(100vh - 220px); }
     .brand p { display: none; }
     .hint { display: none; }
   }
@@ -241,18 +272,36 @@
     <div class="stat lives"><b id="hLives">♥♥♥</b><span>життя</span></div>
     <button class="icon-btn" id="pauseBtn" type="button" aria-label="Пауза">❚❚</button>
   </div>
-  <div class="panel side">
-    <div>
-      <p class="label">Колір кузова</p>
-      <div class="swatches" id="swatches"></div>
-      <div class="swatch-name" id="swatchName"></div>
-    </div>
-    <div>
-      <p class="label">Сцена</p>
-      <div class="toggles">
-        <button class="chip" id="tNight" type="button" aria-pressed="false">Ніч</button>
-        <button class="chip" id="tLights" type="button" aria-pressed="false">Фари</button>
-        <button class="chip" id="tDrive" type="button" aria-pressed="false">Рух</button>
+  <div class="panel side" id="garage">
+    <button class="garage-head" id="garageToggle" type="button" aria-expanded="true" aria-controls="garageBody">
+      <span>Гараж</span><span class="chev" aria-hidden="true">▾</span>
+    </button>
+    <div class="garage-body" id="garageBody">
+      <div>
+        <p class="label">Машина</p>
+        <div class="models" id="models"></div>
+        <div class="stats" id="stats"></div>
+      </div>
+      <div>
+        <p class="label">Колір кузова</p>
+        <div class="swatches" id="swatches"></div>
+        <div class="swatch-name" id="swatchName"></div>
+      </div>
+      <div>
+        <p class="label">Тюнінг</p>
+        <div class="tuning" id="tuning"></div>
+        <div class="row tune-actions">
+          <button class="chip" id="tuneRandom" type="button">Мені пощастить</button>
+          <button class="chip" id="tuneReset" type="button">Як із заводу</button>
+        </div>
+      </div>
+      <div>
+        <p class="label">Сцена</p>
+        <div class="toggles">
+          <button class="chip" id="tNight" type="button" aria-pressed="false">Ніч</button>
+          <button class="chip" id="tLights" type="button" aria-pressed="false">Фари</button>
+          <button class="chip" id="tDrive" type="button" aria-pressed="false">Рух</button>
+        </div>
       </div>
     </div>
   </div>
@@ -280,7 +329,7 @@
 <div class="overlay" id="menu" hidden>
   <div class="panel dialog" role="dialog" aria-labelledby="menuTitle">
     <h2 id="menuTitle">Обери рівень</h2>
-    <p class="sub">Їдь шосе якомога довше: об'їжджай машини й конуси, збирай монети. Швидкість росте сама, тож розслаблятися не вийде.</p>
+    <p class="sub">Їдь шосе якомога довше: об'їжджай машини й конуси, збирай монети. Швидкість росте сама, тож розслаблятися не вийде. Машину й тюнінг обирай у гаражі: від них залежать швидкість, керованість і кількість життів.</p>
     <div class="levels" id="levels"></div>
     <div class="keys">
       <span><kbd>←</kbd><kbd>→</kbd> або <kbd>A</kbd><kbd>D</kbd> кермо</span>
@@ -442,7 +491,7 @@
   const blackGloss = new THREE.MeshPhysicalMaterial({ color: 0x050506, roughness: 0.15, metalness: 0.3, clearcoat: 1 });
   const chrome = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.08, metalness: 1.0 });
   const alloy = new THREE.MeshStandardMaterial({ color: 0xb9bec6, roughness: 0.28, metalness: 1.0 });
-  const darkAlloy = new THREE.MeshStandardMaterial({ color: 0x2a2d32, roughness: 0.4, metalness: 0.9 });
+  const darkAlloy = new THREE.MeshStandardMaterial({ color: 0x2a2d32, roughness: 0.4, metalness: 0.9, side: THREE.DoubleSide });
   const rubber = new THREE.MeshStandardMaterial({ color: 0x141416, roughness: 0.92, metalness: 0 });
   const brakeDisc = new THREE.MeshStandardMaterial({ color: 0x777b80, roughness: 0.45, metalness: 0.9 });
   const caliperMat = new THREE.MeshStandardMaterial({ color: 0xc8231c, roughness: 0.4, metalness: 0.2 });
@@ -450,12 +499,6 @@
   const headMat = new THREE.MeshStandardMaterial({ color: 0xc9d2dc, emissive: 0xdfeaff, emissiveIntensity: 0.25, roughness: 0.1, metalness: 0.4 });
   const tailMat = new THREE.MeshStandardMaterial({ color: 0x400004, emissive: 0xff1020, emissiveIntensity: 0.35, roughness: 0.2 });
   const plateMat = new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.5 });
-
-  // ---------- Car ----------
-  const car = new THREE.Group();
-  const body = new THREE.Group();
-  car.add(body);
-  scene.add(car);
 
   // ExtrudeGeometry ships flat-shaded facets; average normals across soft edges so the clearcoat reads as one surface
   function smoothNormals(geo, creaseDeg) {
@@ -493,7 +536,7 @@
     geo.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
   }
 
-  function extrude(shape, width, bevelT, bevelS, mat) {
+  function extrudeGeo(shape, width, bevelT, bevelS) {
     const depth = width - bevelT * 2;
     const geo = new THREE.ExtrudeGeometry(shape, {
       depth, bevelEnabled: true, bevelThickness: bevelT, bevelSize: bevelS,
@@ -501,233 +544,405 @@
     });
     geo.translate(0, 0, -depth / 2);
     smoothNormals(geo, 48);
-    const m = new THREE.Mesh(geo, mat);
-    m.castShadow = true;
-    m.receiveShadow = true;
-    return m;
+    return geo;
   }
 
-  const REAR_X = -1.35, FRONT_X = 1.42, WHEEL_R = 0.345, ARCH_R = 0.47, WHEEL_Y = WHEEL_R;
-
-  // Lower body side profile (x = length, front is +x)
-  const lower = new THREE.Shape();
-  lower.moveTo(-2.22, 0.32);
-  lower.lineTo(REAR_X - ARCH_R, 0.32);
-  lower.absarc(REAR_X, WHEEL_Y, ARCH_R, Math.PI, 0, true);
-  lower.lineTo(FRONT_X - ARCH_R, 0.30);
-  lower.absarc(FRONT_X, WHEEL_Y, ARCH_R, Math.PI, 0, true);
-  lower.lineTo(2.22, 0.32);
-  lower.quadraticCurveTo(2.36, 0.40, 2.34, 0.54);
-  lower.quadraticCurveTo(2.30, 0.66, 2.08, 0.71);
-  lower.quadraticCurveTo(1.5, 0.82, 0.98, 0.93);
-  lower.quadraticCurveTo(-0.3, 0.97, -1.62, 1.0);
-  lower.quadraticCurveTo(-2.1, 1.0, -2.2, 0.9);
-  lower.quadraticCurveTo(-2.33, 0.74, -2.3, 0.52);
-  lower.quadraticCurveTo(-2.28, 0.36, -2.22, 0.32);
-  body.add(extrude(lower, 1.84, 0.17, 0.06, paint));
-
-  // Greenhouse (glass) + painted roof cut from the same geometry by a clipping plane
-  const cabinShape = new THREE.Shape();
-  cabinShape.moveTo(1.0, 0.92);
-  cabinShape.quadraticCurveTo(0.55, 1.26, 0.12, 1.36);
-  cabinShape.quadraticCurveTo(-0.4, 1.41, -0.92, 1.37);
-  cabinShape.quadraticCurveTo(-1.42, 1.28, -1.72, 0.98);
-  cabinShape.lineTo(1.0, 0.92);
-  const cabin = extrude(cabinShape, 1.46, 0.14, 0.04, glass);
-  cabin.castShadow = false;
-  cabin.renderOrder = 2;
-  body.add(cabin);
-  const roof = new THREE.Mesh(cabin.geometry, roofPaint);
-  roof.scale.set(1.002, 1.003, 1.004);
-  roof.castShadow = true;
-  body.add(roof);
-
-  // Pillars
-  [-1, 1].forEach(s => {
-    const p = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.38, 0.02), blackGloss);
-    p.position.set(-0.4, 1.18, s * 0.735);
-    p.rotation.z = 0.08;
-    body.add(p);
+  // ---------- Car models ----------
+  // Every model is a handful of side-profile numbers (x = length, front is +x; y = height).
+  // Body panels, glass, lights, interior, wheels and tuning parts are all derived from them.
+  const MODELS = [
+    { id: 'gt', name: 'GT Купе', blurb: 'Збалансований гран-турізмо', stats: { speed: 3, handling: 3, armor: 2 },
+      Lf: 2.34, Lr: -2.3, bottom: 0.32, noseY: 0.54, hoodY: 0.71, cowlX: 0.98, cowlY: 0.93, beltY: 1.0, tailY: 0.9,
+      rearX: -1.35, frontX: 1.42, wheelR: 0.345, archR: 0.47, width: 1.84,
+      wsTopX: 0.12, roofY: 1.37, roofRearX: -0.92, glassX: -1.72, cabinW: 1.46, rearSteep: false, seatDrop: 0, mount: 'deck' },
+    { id: 'super', name: 'Суперкар', blurb: 'Низький, широкий і дуже швидкий', stats: { speed: 5, handling: 4, armor: 1 },
+      Lf: 2.32, Lr: -2.25, bottom: 0.24, noseY: 0.38, hoodY: 0.55, cowlX: 0.62, cowlY: 0.8, beltY: 0.92, tailY: 0.86,
+      rearX: -1.42, frontX: 1.45, wheelR: 0.34, archR: 0.46, width: 1.98,
+      wsTopX: -0.12, roofY: 1.2, roofRearX: -0.72, glassX: -1.85, cabinW: 1.42, rearSteep: false, seatDrop: 0.1, mount: 'deck' },
+    { id: 'hatch', name: 'Хетчбек', blurb: 'Малий, спритний, паркується будь-де', stats: { speed: 2, handling: 5, armor: 2 },
+      Lf: 1.95, Lr: -1.92, bottom: 0.33, noseY: 0.6, hoodY: 0.8, cowlX: 0.92, cowlY: 0.98, beltY: 1.04, tailY: 1.0,
+      rearX: -1.25, frontX: 1.28, wheelR: 0.32, archR: 0.44, width: 1.76,
+      wsTopX: 0.2, roofY: 1.5, roofRearX: -1.55, glassX: -1.86, cabinW: 1.44, rearSteep: true, seatDrop: 0, mount: 'roof' },
+    { id: 'suv', name: 'Позашляховик', blurb: 'Високий, міцний, ями не помічає', stats: { speed: 2, handling: 2, armor: 5 },
+      Lf: 2.3, Lr: -2.28, bottom: 0.5, noseY: 0.85, hoodY: 1.08, cowlX: 1.05, cowlY: 1.2, beltY: 1.26, tailY: 1.22,
+      rearX: -1.45, frontX: 1.5, wheelR: 0.42, archR: 0.55, width: 1.98,
+      wsTopX: 0.4, roofY: 1.86, roofRearX: -2.0, glassX: -2.22, cabinW: 1.66, rearSteep: true, seatDrop: 0, mount: 'roof' }
+  ];
+  MODELS.forEach(s => {
+    s.roofCut = s.roofY - 0.015;
+    s.track = s.width / 2 - 0.13;
+    s.tubY = Math.max(s.beltY, s.cowlY) + 0.065 - s.seatDrop;
+    s.seatX = s.cowlX - 1.43;
+    s.steerZ = -s.cabinW * 0.24;
+    s.eye = new THREE.Vector3(s.seatX - 0.05, s.tubY + 0.215, s.steerZ);
+    s.headY = (s.noseY + s.hoodY) / 2 + 0.05;
+    s.hl = (s.Lf - s.Lr) / 2 - 0.1;
+    s.hw = s.width / 2 - 0.06;
   });
 
-  // Side skirts & window trim
-  [-1, 1].forEach(s => {
-    const skirt = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.07, 0.04), blackPlastic);
-    skirt.position.set(0.03, 0.31, s * 0.915);
-    body.add(skirt);
-    const trim = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.018, 0.02), chrome);
-    trim.position.set(-0.35, 0.985, s * 0.733);
-    body.add(trim);
-    // door handles
-    [0.25, -0.75].forEach(x => {
-      const h = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.025, 0.03), chrome);
-      h.position.set(x, 0.86, s * 0.93);
-      body.add(h);
-    });
-    // mirrors
-    const mirror = new THREE.Group();
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.12), blackGloss);
-    arm.position.set(0, 0, s * 0.06);
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.09, 24, 16), paint);
-    cap.scale.set(0.85, 0.6, 1.1);
-    cap.position.set(-0.02, 0.02, s * 0.15);
-    cap.castShadow = true;
-    mirror.add(arm, cap);
-    mirror.position.set(0.82, 1.04, s * 0.72);
-    body.add(mirror);
-    // headlights
-    const housing = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.3), blackGloss);
-    housing.position.set(2.25, 0.69, s * 0.58);
-    housing.rotation.z = -0.6;
-    body.add(housing);
-    const hl = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.016, 0.28), headMat);
-    hl.position.set(2.31, 0.665, s * 0.58);
-    hl.rotation.z = -0.6;
-    body.add(hl);
-    // tail lights
-    const tl = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.08, 0.5), tailMat);
-    tl.position.set(-2.24, 0.82, s * 0.6);
-    tl.rotation.z = -0.5;
-    body.add(tl);
-    // exhaust
-    const ex = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.14, 24, 1, true), chrome);
-    ex.rotation.z = Math.PI / 2;
-    ex.position.set(-2.27, 0.33, s * 0.5);
-    body.add(ex);
-  });
-  // tail light bar
-  const tbar = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.025, 0.7), tailMat);
-  tbar.position.set(-2.285, 0.84, 0);
-  tbar.rotation.z = -0.5;
-  body.add(tbar);
-  // grille & bumpers
-  const grille = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 1.1), blackGloss);
-  grille.position.set(2.3, 0.45, 0);
-  body.add(grille);
-  const splitter = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.03, 1.6), blackPlastic);
-  splitter.position.set(2.24, 0.29, 0);
-  body.add(splitter);
-  const diffuser = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.08, 1.3), blackPlastic);
-  diffuser.position.set(-2.22, 0.32, 0);
-  body.add(diffuser);
-  // license plates
-  const plateF = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.11, 0.52), plateMat);
-  plateF.position.set(2.37, 0.47, 0);
-  body.add(plateF);
-  const plateR = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.11, 0.52), plateMat);
-  plateR.position.set(-2.33, 0.58, 0);
-  plateR.rotation.z = 0.25;
-  body.add(plateR);
+  const TUNING = [
+    { key: 'spoiler', label: 'Спойлер', opts: [['none', 'Без'], ['lip', 'Качиний хвіст'], ['wing', 'Крило'], ['big', 'Форсаж']] },
+    { key: 'rims', label: 'Диски', opts: [['mesh', 'Сітка'], ['five', '5 променів'], ['turbine', 'Турбіна'], ['deep', 'Глибокі']] },
+    { key: 'rimColor', label: 'Колір дисків', opts: [['silver', 'Срібло'], ['black', 'Графіт'], ['gold', 'Золото'], ['bronze', 'Бронза']] },
+    { key: 'ride', label: 'Підвіска', opts: [['stock', 'Заводська'], ['low', 'Занижена'], ['high', 'Піднята']] },
+    { key: 'kit', label: 'Обвіс', opts: [['stock', 'Заводський'], ['sport', 'Спорт']] },
+    { key: 'exhaust', label: 'Вихлоп', opts: [['stock', 'Тихий'], ['sport', 'Чотири труби']] },
+    { key: 'scoop', label: 'Капот', opts: [['off', 'Гладкий'], ['on', 'Повітрозабірник']] },
+    { key: 'neon', label: 'Неон', opts: [['off', 'Вимк.'], ['blue', 'Синій'], ['pink', 'Рожевий'], ['green', 'Зелений']] },
+    { key: 'tint', label: 'Тонування', opts: [['light', 'Світле'], ['dark', 'Темне'], ['mirror', 'Дзеркальне']] },
+    { key: 'caliper', label: 'Супорти', opts: [['red', 'Червоні'], ['yellow', 'Жовті'], ['blue', 'Сині'], ['green', 'Зелені']] }
+  ];
+  const STOCK_TUNING = Object.fromEntries(TUNING.map(t => [t.key, t.opts[0][0]]));
+  const RIM_COLORS = { silver: [0xb9bec6, 0.28], black: [0x2a2d32, 0.35], gold: [0xc9a24a, 0.25], bronze: [0x8a5a2b, 0.3] };
+  const CALIPER_COLORS = { red: 0xc8231c, yellow: 0xe0b21a, blue: 0x1f5fd0, green: 0x2a9d4a };
+  const NEON_COLORS = { blue: 0x2f7bff, pink: 0xff2fa8, green: 0x2fff8a };
 
-  // Interior (seen through glass and from the cockpit camera)
-  const tub = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.02, 1.38), blackPlastic);
-  tub.position.set(-0.35, 1.065, 0);
-  body.add(tub);
-  const dash = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 1.36), blackPlastic);
-  dash.position.set(0.6, 1.1, 0);
-  body.add(dash);
-  const screen = new THREE.Mesh(
-    new THREE.PlaneGeometry(0.2, 0.08),
-    new THREE.MeshStandardMaterial({ color: 0x0a1420, emissive: 0x3c7bd6, emissiveIntensity: 0.6 })
-  );
-  screen.position.set(0.44, 1.2, 0);
-  screen.rotation.y = -Math.PI / 2;
-  screen.rotation.x = 0;
-  body.add(screen);
-  [-0.35, 0.35].forEach(z => {
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.06, 0.46), leather);
-    base.position.set(-0.45, 1.09, z);
-    const back = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.24, 0.44), leather);
-    back.position.set(-0.7, 1.19, z);
-    back.rotation.z = 0.18;
-    body.add(base, back);
-  });
-  const steer = new THREE.Group();
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.018, 12, 40), blackPlastic);
-  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.04, 20), darkAlloy);
-  hub.rotation.x = Math.PI / 2;
-  steer.add(rim, hub);
-  [0, 2.2, -2.2].forEach(a => {
-    const sp = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.02, 0.02), blackPlastic);
-    sp.position.set(Math.cos(a - Math.PI / 2) * 0.08, Math.sin(a - Math.PI / 2) * 0.08, 0);
-    sp.rotation.z = a - Math.PI / 2;
-    steer.add(sp);
-  });
-  steer.position.set(0.3, 1.2, -0.35);
-  steer.rotation.y = Math.PI / 2;
-  steer.rotation.x = -0.35;
-  steer.rotateX(0);
-  body.add(steer);
+  function computeStats(model, t) {
+    const s = model.stats;
+    const clamp = v => Math.max(1, Math.min(6, v));
+    return {
+      speed: clamp(s.speed + (t.kit === 'sport' ? 1 : 0) + (t.exhaust === 'sport' ? 1 : 0) - (t.ride === 'high' ? 1 : 0)),
+      handling: clamp(s.handling + (t.spoiler === 'wing' || t.spoiler === 'big' ? 1 : 0) + (t.ride === 'low' ? 1 : t.ride === 'high' ? -1 : 0)),
+      armor: clamp(s.armor + (t.ride === 'high' ? 1 : 0) + (t.kit === 'sport' ? 0 : 0))
+    };
+  }
 
-  // Wheels
+  // hero-only materials (tuning changes them without touching traffic)
+  const heroRim = new THREE.MeshStandardMaterial({ color: 0xb9bec6, roughness: 0.28, metalness: 1.0 });
+  const carbon = new THREE.MeshPhysicalMaterial({ color: 0x0b0c0e, roughness: 0.55, metalness: 0.15, clearcoat: 0.6, clearcoatRoughness: 0.2, envMapIntensity: 0.5 });
+  const stockGlass = glass.clone();
+  const stockCaliper = caliperMat.clone();
+
+  const geoCache = new Map();
+  function keep(geo) { geo.userData.keep = true; return geo; }
+  function shellGeometry(s) {
+    if (geoCache.has(s.id)) return geoCache.get(s.id);
+    const b = s.bottom, Y = s.wheelR;
+    const lower = new THREE.Shape();
+    lower.moveTo(s.Lr + 0.08, b);
+    lower.lineTo(s.rearX - s.archR, b);
+    lower.absarc(s.rearX, Y, s.archR, Math.PI, 0, true);
+    lower.lineTo(s.frontX - s.archR, b);
+    lower.absarc(s.frontX, Y, s.archR, Math.PI, 0, true);
+    lower.lineTo(s.Lf - 0.12, b);
+    lower.quadraticCurveTo(s.Lf + 0.02, b + 0.08, s.Lf, s.noseY);
+    lower.quadraticCurveTo(s.Lf - 0.04, s.hoodY - 0.05, s.Lf - 0.26, s.hoodY);
+    const hx = s.Lf - 0.26, dx = s.Lr + 0.6;
+    lower.quadraticCurveTo((hx + s.cowlX) / 2 + 0.15, (s.hoodY + s.cowlY) / 2 + 0.04, s.cowlX, s.cowlY);
+    lower.quadraticCurveTo((s.cowlX + dx) / 2, (s.cowlY + s.beltY) / 2 + 0.005, dx, s.beltY);
+    lower.quadraticCurveTo(s.Lr + 0.12, s.beltY, s.Lr + 0.02, s.tailY);
+    lower.quadraticCurveTo(s.Lr - 0.04, (s.tailY + b) / 2 + 0.05, s.Lr, b + 0.2);
+    lower.quadraticCurveTo(s.Lr + 0.02, b + 0.04, s.Lr + 0.08, b);
+
+    const cab = new THREE.Shape();
+    cab.moveTo(s.cowlX + 0.02, s.cowlY - 0.01);
+    cab.quadraticCurveTo((s.cowlX + s.wsTopX) / 2, s.roofY - 0.11, s.wsTopX, s.roofY - 0.01);
+    cab.quadraticCurveTo((s.wsTopX + s.roofRearX) / 2, s.roofY + 0.04, s.roofRearX, s.roofY);
+    if (s.rearSteep) cab.quadraticCurveTo(s.glassX + 0.02, s.roofY - 0.08, s.glassX, s.beltY - 0.02);
+    else cab.quadraticCurveTo(s.roofRearX + (s.glassX - s.roofRearX) * 0.6, s.roofY - 0.09, s.glassX, s.beltY - 0.02);
+    cab.lineTo(s.cowlX + 0.02, s.cowlY - 0.01);
+
+    const out = {
+      lower: keep(extrudeGeo(lower, s.width, 0.17, 0.06)),
+      cabin: keep(extrudeGeo(cab, s.cabinW, 0.14, 0.04))
+    };
+    geoCache.set(s.id, out);
+    return out;
+  }
+
+  // Wheels: shared geometry, scaled per model
   const tireProfile = [
     [0.235, -0.125], [0.3, -0.125], [0.33, -0.11], [0.343, -0.07], [0.346, 0],
     [0.343, 0.07], [0.33, 0.11], [0.3, 0.125], [0.235, 0.125]
   ].map(([r, y]) => new THREE.Vector2(r, y));
-  const tireGeo = new THREE.LatheGeometry(tireProfile, 64);
+  const tireGeo = keep(new THREE.LatheGeometry(tireProfile, 64));
   tireGeo.rotateX(Math.PI / 2);
-  const barrelGeo = new THREE.CylinderGeometry(0.236, 0.236, 0.24, 48, 1, true);
+  const barrelGeo = keep(new THREE.CylinderGeometry(0.236, 0.236, 0.24, 48, 1, true));
   barrelGeo.rotateX(Math.PI / 2);
-  const lipGeo = new THREE.TorusGeometry(0.228, 0.012, 10, 48);
-  const spokeGeo = new THREE.BoxGeometry(0.2, 0.042, 0.03);
+  const lipGeo = keep(new THREE.TorusGeometry(0.228, 0.012, 10, 48));
+  const deepLipGeo = keep(new THREE.TorusGeometry(0.222, 0.024, 12, 48));
+  const spokeGeo = keep(new THREE.BoxGeometry(0.2, 0.042, 0.03));
   spokeGeo.translate(0.115, 0, 0);
-  const hubGeo = new THREE.CylinderGeometry(0.055, 0.06, 0.05, 24);
+  const fatSpokeGeo = keep(new THREE.BoxGeometry(0.2, 0.085, 0.04));
+  fatSpokeGeo.translate(0.115, 0, 0);
+  const thinSpokeGeo = keep(new THREE.BoxGeometry(0.2, 0.022, 0.05));
+  thinSpokeGeo.translate(0.115, 0, 0);
+  const hubGeo = keep(new THREE.CylinderGeometry(0.055, 0.06, 0.05, 24));
   hubGeo.rotateX(Math.PI / 2);
-  const discGeo = new THREE.CylinderGeometry(0.175, 0.175, 0.025, 40);
+  const discGeo = keep(new THREE.CylinderGeometry(0.175, 0.175, 0.025, 40));
   discGeo.rotateX(Math.PI / 2);
-  const innerGeo = new THREE.CircleGeometry(0.235, 40);
+  const innerGeo = keep(new THREE.CircleGeometry(0.235, 40));
+  const caliperGeo = keep(new THREE.BoxGeometry(0.12, 0.08, 0.06));
 
-  const wheels = [];
-  function makeWheel(x, side) {
+  function makeWheel(s, x, side, m, style) {
     const g = new THREE.Group();
-    g.position.set(x, WHEEL_Y, side * 0.79);
+    const k = s.wheelR / 0.345;
+    g.scale.setScalar(k);
+    g.position.set(x, s.wheelR, side * s.track);
     const spin = new THREE.Group();
     spin.name = 'spin';
     const tire = new THREE.Mesh(tireGeo, rubber);
     tire.castShadow = true;
     const barrel = new THREE.Mesh(barrelGeo, darkAlloy);
-    barrel.material.side = THREE.DoubleSide;
-    const lip = new THREE.Mesh(lipGeo, chrome);
+    const lip = new THREE.Mesh(style === 'deep' ? deepLipGeo : lipGeo, chrome);
     lip.position.z = side * 0.1;
     const inner = new THREE.Mesh(innerGeo, blackPlastic);
     inner.position.z = -side * 0.06;
     if (side < 0) inner.rotation.y = Math.PI;
     spin.add(tire, barrel, lip, inner);
-    for (let i = 0; i < 10; i++) {
-      const s = new THREE.Mesh(spokeGeo, alloy);
-      s.rotation.z = (i / 10) * Math.PI * 2 + (i % 2 ? 0.12 : 0);
-      s.position.z = side * 0.085;
-      s.castShadow = true;
-      spin.add(s);
+    const spokes = { mesh: [10, spokeGeo, 0.085], five: [5, fatSpokeGeo, 0.085], turbine: [16, thinSpokeGeo, 0.08], deep: [6, spokeGeo, 0.03] }[style];
+    for (let i = 0; i < spokes[0]; i++) {
+      const sp = new THREE.Mesh(spokes[1], m.rim);
+      sp.rotation.z = (i / spokes[0]) * Math.PI * 2 + (style === 'mesh' && i % 2 ? 0.12 : 0);
+      if (style === 'turbine') sp.rotation.x = side * 0.5;
+      sp.position.z = side * spokes[2];
+      sp.castShadow = true;
+      spin.add(sp);
     }
-    const h = new THREE.Mesh(hubGeo, alloy);
-    h.position.z = side * 0.09;
+    const h = new THREE.Mesh(hubGeo, m.rim);
+    h.position.z = side * (style === 'deep' ? 0.04 : 0.09);
     spin.add(h);
     const disc = new THREE.Mesh(discGeo, brakeDisc);
     disc.position.z = side * 0.02;
     spin.add(disc);
     g.add(spin);
-    const caliper = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.06), caliperMat);
+    const caliper = new THREE.Mesh(caliperGeo, m.caliper);
     caliper.position.set(-0.1, 0.12, side * 0.045);
     caliper.rotation.z = 0.7;
     g.add(caliper);
-    car.add(g);
-    wheels.push({ group: g, spin, front: x > 0 });
+    return { group: g, spin, front: x > 0 };
   }
-  [REAR_X, FRONT_X].forEach(x => [-1, 1].forEach(s => makeWheel(x, s)));
+
+  // Builds one complete car. m = materials { paint, roof, glass, rim, caliper }, t = tuning
+  function buildCar(s, m, t) {
+    const root = new THREE.Group();
+    const body = new THREE.Group();
+    root.add(body);
+    const add = (geo, mat, x, y, z, rz) => {
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y, z);
+      if (rz) mesh.rotation.z = rz;
+      body.add(mesh);
+      return mesh;
+    };
+    const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+    const geo = shellGeometry(s);
+
+    const shell = new THREE.Mesh(geo.lower, m.paint);
+    shell.castShadow = shell.receiveShadow = true;
+    body.add(shell);
+    const cabin = new THREE.Mesh(geo.cabin, m.glass);
+    cabin.renderOrder = 2;
+    body.add(cabin);
+    const roof = new THREE.Mesh(geo.cabin, m.roof);
+    roof.scale.set(1.002, 1.003, 1.004);
+    roof.castShadow = true;
+    body.add(roof);
+
+    const midX = (s.wsTopX + s.roofRearX) / 2;
+    const half = s.width / 2, cw = s.cabinW / 2;
+    const deckY = s.beltY + 0.03;
+    [-1, 1].forEach(side => {
+      // B-pillar, skirts, window trim, handles
+      add(box(0.06, s.roofY - s.beltY - 0.06, 0.02), blackGloss, midX, (s.roofY + s.beltY) / 2 - 0.01, side * (cw + 0.005), 0.08);
+      const skirtLen = (s.frontX - s.archR) - (s.rearX + s.archR) + 0.1;
+      const skirtX = ((s.frontX - s.archR) + (s.rearX + s.archR)) / 2;
+      const sport = t.kit === 'sport';
+      add(box(skirtLen, sport ? 0.12 : 0.07, sport ? 0.1 : 0.04), sport ? carbon : blackPlastic, skirtX, s.bottom - (sport ? 0.01 : 0.01), side * (half + (sport ? 0.01 : -0.005)));
+      add(box(s.cowlX - s.glassX - 0.25, 0.018, 0.02), chrome, (s.cowlX + s.glassX) / 2 - 0.05, s.beltY - 0.015, side * (cw + 0.003));
+      [s.cowlX - 0.75, s.cowlX - 1.7].forEach(x => {
+        if (x > s.rearX + s.archR) add(box(0.16, 0.025, 0.03), chrome, x, s.beltY - 0.14, side * (half + 0.01));
+      });
+      // mirrors
+      const mirror = new THREE.Group();
+      const arm = new THREE.Mesh(box(0.08, 0.04, 0.12), blackGloss);
+      arm.position.set(0, 0, side * 0.06);
+      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.09, 24, 16), m.paint);
+      cap.scale.set(0.85, 0.6, 1.1);
+      cap.position.set(-0.02, 0.02, side * 0.15);
+      cap.castShadow = true;
+      mirror.add(arm, cap);
+      mirror.position.set(s.cowlX - 0.16, s.cowlY + 0.11, side * (cw - 0.01));
+      body.add(mirror);
+      // lights
+      add(box(0.16, 0.05, 0.3), blackGloss, s.Lf - 0.09, s.headY + 0.015, side * (half - 0.34), -0.6);
+      add(box(0.05, 0.016, 0.28), headMat, s.Lf - 0.03, s.headY - 0.01, side * (half - 0.34), -0.6);
+      add(box(0.16, 0.08, 0.5), tailMat, s.rearSteep ? s.Lr - 0.03 : s.Lr + 0.06, s.tailY - 0.08, side * (half - 0.32), s.rearSteep ? -0.1 : -0.5);
+      // exhaust
+      const pipes = t.exhaust === 'sport' ? [half - 0.4, half - 0.55] : [half - 0.42];
+      pipes.forEach(z => {
+        const r = t.exhaust === 'sport' ? 0.06 : 0.045;
+        const ex = add(new THREE.CylinderGeometry(r, r, 0.16, 24, 1, true), t.exhaust === 'sport' ? darkAlloy : chrome, s.Lr + 0.02, s.bottom + 0.02, side * z, Math.PI / 2);
+        ex.material = ex.material.clone();
+        ex.material.side = THREE.DoubleSide;
+      });
+    });
+    add(box(0.05, 0.025, s.width - 1.2), tailMat, s.rearSteep ? s.Lr - 0.055 : s.Lr + 0.015, s.tailY - 0.06, 0, s.rearSteep ? -0.1 : -0.5);
+    add(box(0.12, s.id === 'suv' ? 0.3 : 0.16, s.width * 0.6), blackGloss, s.Lf - 0.04, s.bottom + (s.id === 'suv' ? 0.2 : 0.13), 0);
+    add(box(t.kit === 'sport' ? 0.42 : 0.3, 0.03, s.width - (t.kit === 'sport' ? 0.1 : 0.24)), t.kit === 'sport' ? carbon : blackPlastic, s.Lf - 0.1, s.bottom - 0.03, 0);
+    add(box(0.25, 0.08, s.width - 0.54), t.kit === 'sport' ? carbon : blackPlastic, s.Lr + 0.08, s.bottom, 0);
+    if (t.kit === 'sport') {
+      for (let i = -2; i <= 2; i++) add(box(0.3, 0.12, 0.015), carbon, s.Lr + 0.12, s.bottom - 0.04, i * 0.22);
+    }
+    add(box(0.02, 0.11, 0.52), plateMat, s.Lf + 0.03, s.bottom + 0.15, 0);
+    add(box(0.02, 0.11, 0.52), plateMat, s.Lr - 0.01, (s.bottom + s.tailY) / 2 + 0.02, 0, 0.25);
+
+    // hood scoop
+    if (t.scoop === 'on') {
+      const sx = (s.Lf - 0.26 + s.cowlX) / 2;
+      const sy = (s.hoodY + s.cowlY) / 2 + 0.07;
+      const scoop = add(box(0.6, 0.09, 0.5), m.paint, sx, sy, 0, -Math.atan((s.cowlY - s.hoodY) / (s.Lf - 0.26 - s.cowlX)));
+      scoop.castShadow = true;
+      add(box(0.02, 0.06, 0.42), blackGloss, sx + 0.3, sy, 0);
+    }
+
+    // spoilers
+    if (t.spoiler !== 'none') {
+      const onRoof = s.mount === 'roof';
+      const baseX = onRoof ? s.roofRearX + 0.02 : s.Lr + 0.32;
+      const baseY = onRoof ? s.roofY + 0.04 : deckY;
+      const span = (onRoof ? s.cabinW : s.width) - 0.12;
+      if (t.spoiler === 'lip') {
+        const lip = add(box(onRoof ? 0.34 : 0.22, 0.04, span), m.paint, baseX - 0.08, baseY + 0.02, 0, onRoof ? -0.12 : 0.22);
+        lip.castShadow = true;
+      } else {
+        const big = t.spoiler === 'big';
+        const h = onRoof ? (big ? 0.1 : 0.05) : (big ? 0.34 : 0.2);
+        [-1, 1].forEach(side => add(box(0.06, h, 0.03), carbon, baseX, baseY + h / 2, side * span * 0.32, -0.2));
+        const blade = add(box(big ? 0.44 : 0.32, 0.035, span), carbon, baseX - 0.05, baseY + h + 0.02, 0, 0.14);
+        blade.castShadow = true;
+        if (big) add(box(0.26, 0.025, span), carbon, baseX - 0.1, baseY + h + 0.12, 0, 0.3);
+        [-1, 1].forEach(side => add(box(big ? 0.46 : 0.34, big ? 0.2 : 0.12, 0.02), carbon, baseX - 0.06, baseY + h + 0.04, side * span / 2));
+      }
+    }
+
+    // interior
+    const tubLen = s.cowlX - s.glassX - 0.3;
+    add(box(tubLen, 0.02, s.cabinW - 0.08), blackPlastic, (s.cowlX + s.glassX) / 2, s.tubY, 0);
+    add(box(0.3, 0.1, s.cabinW - 0.1), blackPlastic, s.cowlX - 0.4, s.tubY + 0.035, 0);
+    const scr = add(new THREE.PlaneGeometry(0.2, 0.08), screenMat, s.cowlX - 0.56, s.tubY + 0.135, 0);
+    scr.rotation.y = -Math.PI / 2;
+    [-1, 1].forEach(side => {
+      add(box(0.46, 0.06, 0.46), leather, s.seatX, s.tubY + 0.025, side * cw * 0.48);
+      add(box(0.09, 0.24, 0.44), leather, s.seatX - 0.25, s.tubY + 0.125, side * cw * 0.48, 0.18);
+    });
+    const steer = new THREE.Group();
+    const rim = new THREE.Mesh(steerRimGeo, blackPlastic);
+    const hub = new THREE.Mesh(steerHubGeo, darkAlloy);
+    steer.add(rim, hub);
+    [0, 2.2, -2.2].forEach(a => {
+      const sp = new THREE.Mesh(steerSpokeGeo, blackPlastic);
+      sp.position.set(Math.cos(a - Math.PI / 2) * 0.08, Math.sin(a - Math.PI / 2) * 0.08, 0);
+      sp.rotation.z = a - Math.PI / 2;
+      steer.add(sp);
+    });
+    steer.position.set(s.cowlX - 0.68, s.tubY + 0.135, s.steerZ);
+    steer.rotation.y = Math.PI / 2;
+    steer.rotation.x = -0.35;
+    body.add(steer);
+
+    const wheels = [];
+    [s.rearX, s.frontX].forEach(x => [-1, 1].forEach(side => {
+      const w = makeWheel(s, x, side, m, t.rims);
+      root.add(w.group);
+      wheels.push(w);
+    }));
+    return { root, body, wheels, spins: wheels.map(w => w.spin) };
+  }
+  const screenMat = new THREE.MeshStandardMaterial({ color: 0x0a1420, emissive: 0x3c7bd6, emissiveIntensity: 0.6 });
+  const steerRimGeo = keep(new THREE.TorusGeometry(0.17, 0.018, 12, 40));
+  const steerHubGeo = keep(new THREE.CylinderGeometry(0.05, 0.05, 0.04, 20));
+  steerHubGeo.rotateX(Math.PI / 2);
+  const steerSpokeGeo = keep(new THREE.BoxGeometry(0.15, 0.02, 0.02));
+
+  // ---------- Hero car ----------
+  const car = new THREE.Group();
+  scene.add(car);
+  let body = new THREE.Group();
+  let wheels = [];
+  let heroBuild = null;
+  let heroRide = 0;
+  const garage = { model: 'gt', paint: 0, tuning: { ...STOCK_TUNING } };
+  try {
+    const saved = JSON.parse(localStorage.getItem('car-garage') || 'null');
+    if (saved && MODELS.some(mm => mm.id === saved.model)) {
+      garage.model = saved.model;
+      garage.paint = Number(saved.paint) || 0;
+      TUNING.forEach(g => { if (saved.tuning && g.opts.some(o => o[0] === saved.tuning[g.key])) garage.tuning[g.key] = saved.tuning[g.key]; });
+    }
+  } catch (e) { /* storage blocked or corrupt: start stock */ }
+  function saveGarage() { try { localStorage.setItem('car-garage', JSON.stringify(garage)); } catch (e) { /* ignore */ } }
+  const heroModel = () => MODELS.find(mm => mm.id === garage.model);
+
+  const neonTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d');
+    const grd = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+    grd.addColorStop(0, 'rgba(255,255,255,1)');
+    grd.addColorStop(0.5, 'rgba(255,255,255,0.45)');
+    grd.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 128, 128);
+    return new THREE.CanvasTexture(c);
+  })();
+  const neonMat = new THREE.MeshBasicMaterial({ map: neonTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+  const neon = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), neonMat);
+  neon.rotation.x = -Math.PI / 2;
+  neon.position.y = 0.015;
+  car.add(neon);
+  const neonLight = new THREE.PointLight(0xffffff, 0, 4, 2);
+  neonLight.position.y = 0.12;
+  car.add(neonLight);
 
   // Headlight beams (night)
   const beams = [];
   [-1, 1].forEach(s => {
     const spot = new THREE.SpotLight(0xfff3dd, 0, 45, 0.45, 0.6, 1.2);
-    spot.position.set(2.3, 0.7, s * 0.58);
-    spot.target.position.set(10, 0, s * 1.2);
     car.add(spot, spot.target);
     beams.push(spot);
   });
   const tailGlow = new THREE.PointLight(0xff1a1a, 0, 3, 2);
-  tailGlow.position.set(-2.6, 0.75, 0);
   car.add(tailGlow);
+
+  let onHeroChange = () => {};
+  function rebuildHero() {
+    const s = heroModel();
+    const t = garage.tuning;
+    if (heroBuild) {
+      car.remove(heroBuild.root);
+      heroBuild.root.traverse(o => { if (o.isMesh && !o.geometry.userData.keep) o.geometry.dispose(); });
+    }
+    const [rc, rr] = RIM_COLORS[t.rimColor];
+    heroRim.color.setHex(rc);
+    heroRim.roughness = rr;
+    caliperMat.color.setHex(CALIPER_COLORS[t.caliper]);
+    glass.opacity = t.tint === 'dark' ? 0.72 : t.tint === 'mirror' ? 0.62 : 0.42;
+    glass.metalness = t.tint === 'mirror' ? 0.95 : 0.2;
+    glass.color.setHex(t.tint === 'mirror' ? 0x3a4656 : 0x0b1118);
+    heroRide = t.ride === 'low' ? -0.045 : t.ride === 'high' ? 0.07 : 0;
+    roofPaint.clippingPlanes[0].constant = -(s.roofCut + heroRide);
+
+    heroBuild = buildCar(s, { paint, roof: roofPaint, glass, rim: heroRim, caliper: caliperMat }, t);
+    car.add(heroBuild.root);
+    body = heroBuild.body;
+    body.position.y = heroRide;
+    wheels = heroBuild.wheels;
+
+    blob.scale.set((s.Lf - s.Lr) / 4.64, 1, s.width / 1.84);
+    const nc = NEON_COLORS[t.neon];
+    neon.visible = !!nc;
+    neonLight.intensity = nc ? 2.2 : 0;
+    if (nc) { neonMat.color.setHex(nc); neonLight.color.setHex(nc); }
+    neon.scale.set((s.Lf - s.Lr) * 1.05, s.width * 1.5, 1);
+    beams.forEach((b, i) => {
+      const side = i ? 1 : -1;
+      b.position.set(s.Lf - 0.04, s.headY + heroRide, side * (s.width / 2 - 0.34));
+      b.target.position.set(10, 0, side * 1.2);
+    });
+    tailGlow.position.set(s.Lr - 0.3, s.tailY - 0.15, 0);
+    onHeroChange(s);
+  }
 
   // ---------- Paint swatches ----------
   const PAINTS = [
@@ -759,10 +974,79 @@
     b.title = p.name;
     b.setAttribute('aria-label', p.name);
     b.style.background = '#' + p.hex.toString(16).padStart(6, '0');
-    b.addEventListener('click', () => applyPaint(p));
+    b.addEventListener('click', () => { garage.paint = PAINTS.indexOf(p); saveGarage(); applyPaint(p); });
     swWrap.appendChild(b);
   });
-  applyPaint(PAINTS[0]);
+  rebuildHero();
+  applyPaint(PAINTS[garage.paint] || PAINTS[0]);
+
+  // keep the car centred in the free space when the garage panel covers the right edge
+  function frameView() {
+    const w = window.innerWidth, h = window.innerHeight;
+    const panelOpen = !document.getElementById('garageBody').hidden;
+    const covered = panelOpen && w > 640 && !document.body.classList.contains('playing');
+    if (covered) camera.setViewOffset(w, h, 150, 0, w, h);
+    else camera.clearViewOffset();
+    camera.updateProjectionMatrix();
+  }
+
+  // ---------- Garage UI ----------
+  const modelsEl = document.getElementById('models');
+  const statsEl = document.getElementById('stats');
+  const tuningEl = document.getElementById('tuning');
+  const STAT_LABELS = [['speed', 'Швидкість'], ['handling', 'Керованість'], ['armor', 'Міцність']];
+  function renderGarage() {
+    modelsEl.innerHTML = '';
+    MODELS.forEach(mm => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'model';
+      b.setAttribute('aria-pressed', String(mm.id === garage.model));
+      b.innerHTML = `<b>${mm.name}</b><span>${mm.blurb}</span>`;
+      b.addEventListener('click', () => { garage.model = mm.id; saveGarage(); rebuildHero(); renderGarage(); });
+      modelsEl.appendChild(b);
+    });
+    const st = computeStats(heroModel(), garage.tuning);
+    statsEl.innerHTML = STAT_LABELS.map(([k, label]) =>
+      `<div class="stat-row"><span>${label}</span><div class="bars" aria-label="${label}: ${st[k]} з 6">${[1, 2, 3, 4, 5, 6].map(i => `<i class="${i <= st[k] ? 'on' : ''}"></i>`).join('')}</div></div>`
+    ).join('') + `<p class="stat-note">${st.armor >= 5 ? 'Міцність 5+: у грі буде додаткове життя.' : 'Міцність 5+ дає в грі додаткове життя.'}</p>`;
+    tuningEl.innerHTML = '';
+    TUNING.forEach(g => {
+      const wrap = document.createElement('div');
+      wrap.className = 'tune';
+      wrap.innerHTML = `<span class="tune-label">${g.label}</span>`;
+      const row = document.createElement('div');
+      row.className = 'toggles';
+      g.opts.forEach(([val, label]) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chip';
+        b.textContent = label;
+        b.setAttribute('aria-pressed', String(garage.tuning[g.key] === val));
+        b.addEventListener('click', () => { garage.tuning[g.key] = val; saveGarage(); rebuildHero(); renderGarage(); });
+        row.appendChild(b);
+      });
+      wrap.appendChild(row);
+      tuningEl.appendChild(wrap);
+    });
+  }
+  renderGarage();
+  document.getElementById('tuneReset').addEventListener('click', () => {
+    garage.tuning = { ...STOCK_TUNING }; saveGarage(); rebuildHero(); renderGarage();
+  });
+  document.getElementById('tuneRandom').addEventListener('click', () => {
+    TUNING.forEach(g => (garage.tuning[g.key] = g.opts[Math.floor(Math.random() * g.opts.length)][0]));
+    saveGarage(); rebuildHero(); renderGarage();
+  });
+  const garageToggle = document.getElementById('garageToggle');
+  const garageBody = document.getElementById('garageBody');
+  function setGarageOpen(open) {
+    garageBody.hidden = !open;
+    garageToggle.setAttribute('aria-expanded', String(open));
+    frameView();
+  }
+  garageToggle.addEventListener('click', () => setGarageOpen(garageBody.hidden));
+  setGarageOpen(window.innerWidth > 640);
 
   // ---------- Highway world (game mode) ----------
   let mode = 'studio';
@@ -834,29 +1118,26 @@
     });
   }
 
-  // traffic: clones of the hero car with their own paint
+  // traffic: every model in stock trim, each with its own paint
   const TRAFFIC_COLORS = [0x1f5fa8, 0xe9e6df, 0x2b2f36, 0x0d5643, 0xc4921b, 0x6b1fa8, 0xd8d8d0, 0x9a1b1b];
   const trafficPool = [];
-  for (let i = 0; i < 10; i++) {
-    const t = car.clone(true);
-    const lights = [];
-    t.traverse(o => { if (o.isLight) lights.push(o); });
-    lights.forEach(l => l.parent.remove(l));
-    const tp = paint.clone(), tr = roofPaint.clone();
-    const spins = [];
+  for (let i = 0; i < 12; i++) {
+    const model = MODELS[i % MODELS.length];
+    const tp = paint.clone(), tr = paint.clone();
+    tr.clippingPlanes = [new THREE.Plane(new THREE.Vector3(0, 1, 0), -model.roofCut)];
+    const build = buildCar(model, { paint: tp, roof: tr, glass: stockGlass, rim: alloy, caliper: stockCaliper }, STOCK_TUNING);
+    const t = build.root;
     t.traverse(o => {
-      if (o.name === 'spin') spins.push(o);
       if (!o.isMesh) return;
-      if (o.material === paint) o.material = tp;
-      else if (o.material === roofPaint) o.material = tr;
-      o.castShadow = o.material === tp;
+      o.castShadow = o.material === tp || o.material === tr;
       o.receiveShadow = false;
     });
     const sh = blob.clone();
+    sh.scale.set((model.Lf - model.Lr) / 4.64, 1, model.width / 1.84);
     t.add(sh);
     t.visible = false;
     world.add(t);
-    trafficPool.push({ obj: t, tp, tr, spins });
+    trafficPool.push({ obj: t, tp, tr, spins: build.spins, model });
   }
 
   const coneMat = new THREE.MeshStandardMaterial({ color: 0xff6a13, roughness: 0.5 });
@@ -943,7 +1224,7 @@
     { id: 'side', name: 'Профіль', note: 'як на фото в оголошенні', pos: V(0.1, 0.95, 7.2), target: V(0, 0.6, 0), orbit: true },
     { id: 'rear', name: 'Ззаду', note: 'те, що бачать інші на трасі', pos: V(-5.4, 1.5, -2.4), target: V(0, 0.6, 0), orbit: true },
     { id: 'top', name: 'Згори', note: 'погляд дрона', pos: V(0.01, 9.5, 0.01), target: V(0, 0, 0), orbit: true },
-    { id: 'wheel', name: 'Колесо', note: 'диски, гальма, гордість', pos: V(2.35, 0.42, 2.05), target: V(FRONT_X, 0.34, 0.8), orbit: true },
+    { id: 'wheel', name: 'Колесо', note: 'диски, гальма, гордість', pos: V(2.35, 0.42, 2.05), target: V(1.42, 0.34, 0.8), orbit: true },
     { id: 'cockpit', name: 'Салон', note: 'пристебніться · тягніть, щоб роззирнутися', pos: V(-0.5, 1.28, -0.35), target: V(-0.4, 1.27, -0.35), orbit: true, interior: true },
     { id: 'chase', name: 'Погоня', note: 'камера їде за авто', dynamic: true, drive: true },
     { id: 'cine', name: 'Кіно', note: 'автоматичний проліт', dynamic: true }
@@ -955,6 +1236,16 @@
     { id: 'g-top', name: 'Дрон', note: 'видно все шосе', dynamic: true }
   ];
   let CAMS = STUDIO_CAMS;
+  onHeroChange = s => {
+    const y = s.eye.y + heroRide;
+    const ck = STUDIO_CAMS.find(c => c.id === 'cockpit');
+    ck.pos.set(s.eye.x, y, s.eye.z);
+    ck.target.set(s.eye.x + 0.1, y - 0.01, s.eye.z);
+    const wh = STUDIO_CAMS.find(c => c.id === 'wheel');
+    wh.target.set(s.frontX, s.wheelR, s.track);
+    wh.pos.set(s.frontX + 0.93, s.wheelR + 0.08, s.track + 1.25);
+  };
+  onHeroChange(heroModel());
   const camsEl = document.getElementById('cams');
   const camName = document.getElementById('camName');
   const camNote = document.getElementById('camNote');
@@ -1012,13 +1303,15 @@
       outPos.set(portrait ? -12 : -9, portrait ? 5 : 3.7, z * 0.7);
       outTarget.set(12, 0.4, z * 0.85);
     } else if (c.id === 'g-hood') {
+      const hm = heroModel();
       car.updateMatrixWorld();
-      outPos.copy(car.localToWorld(tmpLocal.set(1.7, 1.12, 0)));
+      outPos.copy(car.localToWorld(tmpLocal.set(hm.cowlX + 0.7, (hm.hoodY + hm.cowlY) / 2 + 0.3 + heroRide, 0)));
       outTarget.copy(car.localToWorld(tmpLocal.set(14, 0.7, 0)));
     } else if (c.id === 'g-cockpit') {
+      const e = heroModel().eye;
       car.updateMatrixWorld();
-      outPos.copy(car.localToWorld(tmpLocal.set(-0.5, 1.28, -0.35)));
-      outTarget.copy(car.localToWorld(tmpLocal.set(8, 1.12, -0.35)));
+      outPos.copy(car.localToWorld(tmpLocal.set(e.x, e.y + heroRide, e.z)));
+      outTarget.copy(car.localToWorld(tmpLocal.set(8, e.y + heroRide - 0.16, e.z)));
     } else if (c.id === 'g-top') {
       outPos.set(-4, portrait ? 22 : 15, z * 0.35);
       outTarget.set(portrait ? 10 : 9, 0, z * 0.35);
@@ -1151,6 +1444,7 @@
     mode = 'studio';
     game.running = false;
     document.body.classList.remove('in-game', 'playing');
+    frameView();
     modeBtn.textContent = 'Грати';
     showOverlay(null);
     clearItems();
@@ -1167,6 +1461,7 @@
   function openMenu() {
     game.running = false;
     document.body.classList.remove('playing');
+    frameView();
     renderLevels();
     showOverlay(menuEl);
     hintEl.textContent = '';
@@ -1179,7 +1474,9 @@
     game.speed = L.start;
     game.dist = 0;
     game.coins = 0;
-    game.lives = L.lives;
+    const st = computeStats(heroModel(), garage.tuning);
+    game.mods = { speed: 0.9 + st.speed * 0.035, gas: 1.15 + st.speed * 0.04, steer: 0.7 + st.handling * 0.1 };
+    game.lives = L.lives + (st.armor >= 5 ? 1 : 0);
     game.z = 0; game.vz = 0; game.steer = 0;
     game.invuln = 0; game.shake = 0;
     game.nextRow = 70;
@@ -1191,6 +1488,7 @@
     applyScene();
     showOverlay(null);
     document.body.classList.add('playing');
+    frameView();
     hintEl.textContent = '← → кермо · ↑ газ · ↓ гальмо · C камера · P пауза';
     updateHud();
     toast(L.name + ': поїхали!');
@@ -1206,6 +1504,7 @@
     game.running = false;
     car.visible = true;
     document.body.classList.remove('playing');
+    frameView();
     const score = Math.floor(game.dist) + game.coins * 25;
     const prevBest = loadBest(game.level.id);
     const record = score > prevBest;
@@ -1236,7 +1535,8 @@
   }
 
   function acquire(pool) {
-    const it = pool.find(p => !p.obj.visible);
+    const free = pool.filter(p => !p.obj.visible);
+    const it = free[Math.floor(Math.random() * free.length)];
     if (!it) return null;
     it.obj.visible = true;
     return it;
@@ -1257,7 +1557,7 @@
       t.tr.color.setHex(color);
       Object.assign(t, {
         type: 'car', wx: wx + k * rand(0, 6), z: LANES[li], targetZ: LANES[li],
-        tSpeed: L.start * 0.55 + rand(-1.5, 1.5), hl: 2.15, hw: 0.86,
+        tSpeed: L.start * 0.55 + rand(-1.5, 1.5), hl: t.model.hl, hw: t.model.hw,
         changeAt: Math.random() < L.laneChange ? rand(18, 45) : -1, roll: 0
       });
       t.obj.position.set(0, 0, t.z);
@@ -1307,18 +1607,18 @@
   function updateGame(dt) {
     const L = game.level;
     // speed: grows with distance, gas and brake bend it
-    const base = Math.min(L.max, L.start + game.dist * L.ramp);
-    const target = base * (input.gas ? 1.3 : 1) * (input.brake ? 0.45 : 1);
+    const base = Math.min(L.max, L.start + game.dist * L.ramp) * game.mods.speed;
+    const target = base * (input.gas ? game.mods.gas : 1) * (input.brake ? 0.45 : 1);
     game.speed += (target - game.speed) * Math.min(1, dt * (input.brake ? 2.2 : 0.9));
     game.dist += game.speed * dt;
 
     // steering
     const steerIn = (input.right ? 1 : 0) - (input.left ? 1 : 0);
     game.steer += (steerIn - game.steer) * Math.min(1, dt * 8);
-    const steerRate = 7 + game.speed * 0.08;
+    const steerRate = (7 + game.speed * 0.08) * game.mods.steer;
     game.vz += (game.steer * steerRate - game.vz) * Math.min(1, dt * 6);
     game.z += game.vz * dt;
-    const lim = ROAD_HALF - 0.95;
+    const lim = ROAD_HALF - heroModel().hw - 0.05;
     if (Math.abs(game.z) > lim) { game.z = Math.sign(game.z) * lim; game.vz *= -0.2; game.shake = Math.max(game.shake, 0.08); }
     car.position.z = game.z;
     car.rotation.y = -game.vz * 0.022;
@@ -1338,7 +1638,7 @@
       const it = game.items[i];
       if (it.type === 'car') {
         it.wx += it.tSpeed * dt;
-        it.roll -= (it.tSpeed * dt) / WHEEL_R;
+        it.roll -= (it.tSpeed * dt) / it.model.wheelR;
         it.spins.forEach(sp => (sp.rotation.z = it.roll));
         const rel = it.wx - game.dist;
         if (it.changeAt > 0 && rel < it.changeAt) {
@@ -1362,8 +1662,9 @@
         game.items.splice(i, 1);
         continue;
       }
-      // collisions (player half-length 2.15, half-width 0.86)
-      if (Math.abs(x) < 2.15 + it.hl && Math.abs(it.z - game.z) < 0.86 + it.hw) {
+      // collisions (boxes from each model's footprint)
+      const hm = heroModel();
+      if (Math.abs(x) < hm.hl + it.hl && Math.abs(it.z - game.z) < hm.hw + it.hw) {
         if (it.type === 'coin') {
           it.obj.visible = false;
           game.coins += 1;
@@ -1435,7 +1736,7 @@
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.fov = w < h ? 55 : 40;
-    camera.updateProjectionMatrix();
+    frameView();
   }
   window.addEventListener('resize', resize);
   resize();
@@ -1459,12 +1760,12 @@
     // driving: wheels roll, ground flows, body breathes on the suspension
     const speed = playing ? game.speed : (mode === 'studio' && state.drive ? 16 : 0); // m/s
     const dist = speed * dt;
-    roll -= dist / WHEEL_R;
+    roll -= dist / heroModel().wheelR;
     wheels.forEach(w => (w.spin.rotation.z = roll));
     floorTex.offset.x += dist * 0.5;
     roadTex.offset.x += dist / 12;
     const moving = speed > 0;
-    body.position.y = moving ? Math.sin(elapsed * 9) * 0.006 + Math.sin(elapsed * 2.3) * 0.004 : 0;
+    body.position.y = heroRide + (moving ? Math.sin(elapsed * 9) * 0.006 + Math.sin(elapsed * 2.3) * 0.004 : 0);
     body.rotation.x = playing ? game.vz * 0.004 : (moving ? Math.sin(elapsed * 1.7) * 0.004 : 0);
 
     if (tween) {
