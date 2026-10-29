@@ -1,0 +1,789 @@
+<title>Автостудія 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;600;700&display=swap">
+<style>
+  /* Layout: full-bleed 3D canvas, HUD floats on glass panels — camera bar at the bottom, paint & scene at the right */
+  :root {
+    --bg: #0c0e12;
+    --panel: rgba(18, 21, 27, 0.72);
+    --line: rgba(190, 205, 225, 0.14);
+    --fg: #e9edf2;
+    --muted: #8b95a3;
+    --accent: #f2b33d;
+    --font-display: "Unbounded", "Arial Black", system-ui, sans-serif;
+    --font-body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+    color-scheme: dark;
+  }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-body);
+    overflow: hidden;
+  }
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+  .hud { position: fixed; pointer-events: none; z-index: 2; }
+  .hud > * { pointer-events: auto; }
+
+  .top {
+    top: calc(14px + env(safe-area-inset-top, 0px));
+    left: max(16px, env(safe-area-inset-left, 0px));
+    right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  }
+  .brand h1 {
+    margin: 0; font-family: var(--font-display); font-weight: 700;
+    font-size: clamp(16px, 2.2vw, 22px); letter-spacing: 0.02em;
+  }
+  .brand { text-shadow: 0 1px 10px rgba(0, 0, 0, 0.55); }
+  .brand p { margin: 4px 0 0; color: var(--fg); opacity: 0.85; font-size: 13px; }
+  .brand .cam-name { color: var(--accent); font-weight: 700; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  .side {
+    display: flex; flex-direction: column; gap: 12px; padding: 12px;
+    max-width: 220px;
+  }
+  .label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--muted); margin: 0 0 8px;
+  }
+  .swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+  .swatch {
+    width: 28px; height: 28px; border-radius: 50%; border: 2px solid transparent;
+    cursor: pointer; padding: 0; outline-offset: 2px;
+    box-shadow: inset 0 -6px 10px rgba(0,0,0,.35), inset 0 4px 8px rgba(255,255,255,.25);
+  }
+  .swatch[aria-pressed="true"] { border-color: var(--fg); }
+  .swatch-name { margin-top: 6px; font-size: 12px; color: var(--fg); min-height: 1.2em; }
+
+  .toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font: 600 12px var(--font-body); color: var(--fg);
+    background: transparent; border: 1px solid var(--line); border-radius: 999px;
+    padding: 6px 10px; cursor: pointer;
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); color: #17130a; border-color: var(--accent); }
+
+  .bottom {
+    left: 50%; transform: translateX(-50%);
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    max-width: calc(100% - 32px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+  }
+  .cams {
+    display: flex; gap: 4px; padding: 6px; overflow-x: auto; scrollbar-width: none;
+  }
+  .cams::-webkit-scrollbar { display: none; }
+  .cam {
+    flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font: 600 13px var(--font-body); color: var(--fg);
+    background: transparent; border: 0; border-radius: 10px;
+    padding: 8px 12px; cursor: pointer; white-space: nowrap;
+  }
+  .cam kbd {
+    font: 500 10px var(--font-body); color: var(--muted);
+  }
+  .cam:hover { background: rgba(255,255,255,.06); }
+  .cam[aria-pressed="true"] { background: var(--accent); color: #17130a; }
+  .cam[aria-pressed="true"] kbd { color: #4a3a12; }
+
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .hint {
+    position: fixed; z-index: 2; pointer-events: none;
+    left: 50%; transform: translateX(-50%);
+    bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+    font-size: 12px; color: var(--fg); opacity: 0.75; text-align: center;
+    text-shadow: 0 1px 8px rgba(0, 0, 0, 0.6);
+    padding: 0 16px; width: 100%;
+  }
+
+  .loading {
+    position: fixed; inset: 0; z-index: 5; display: grid; place-items: center;
+    background: var(--bg); color: var(--muted); font-size: 14px;
+    transition: opacity .6s ease;
+  }
+  .loading.done { opacity: 0; pointer-events: none; }
+
+  @media (max-width: 640px) {
+    .top { flex-direction: column; }
+    .side { flex-direction: row; flex-wrap: wrap; max-width: none; width: 100%; box-sizing: border-box; }
+    .side > div { flex: 1 1 140px; }
+    .brand p { display: none; }
+    .hint { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .loading { transition: none; }
+  }
+</style>
+
+<canvas id="scene" aria-label="3D-модель автомобіля"></canvas>
+<div class="loading" id="loading">Заводимо двигун…</div>
+
+<div class="hud top">
+  <div class="brand">
+    <h1>Автостудія 3D</h1>
+    <p>Камера: <span class="cam-name" id="camName">Вільна</span> · <span id="camNote">тягніть мишкою, щоб обертати</span></p>
+  </div>
+  <div class="panel side">
+    <div>
+      <p class="label">Колір кузова</p>
+      <div class="swatches" id="swatches"></div>
+      <div class="swatch-name" id="swatchName"></div>
+    </div>
+    <div>
+      <p class="label">Сцена</p>
+      <div class="toggles">
+        <button class="chip" id="tNight" type="button" aria-pressed="false">Ніч</button>
+        <button class="chip" id="tLights" type="button" aria-pressed="false">Фари</button>
+        <button class="chip" id="tDrive" type="button" aria-pressed="false">Рух</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="hud bottom">
+  <div class="panel cams" id="cams" role="toolbar" aria-label="Камери"></div>
+</div>
+<div class="hint" id="hint">Клавіші 1–9 перемикають камери · колесо миші — наближення</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
+<script>
+(() => {
+  const canvas = document.getElementById('scene');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- Renderer & scene ----------
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.localClippingEnabled = true;
+
+  const scene = new THREE.Scene();
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new THREE.RoomEnvironment(), 0.04).texture;
+
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 200);
+  camera.position.set(5.5, 1.8, 4.5);
+
+  const controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.target.set(0, 0.6, 0);
+
+  // ---------- Lights ----------
+  const hemi = new THREE.HemisphereLight(0xdfe8ff, 0x1b1d22, 0.35);
+  scene.add(hemi);
+
+  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+  sun.position.set(4, 8, 3);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  sun.shadow.camera.left = -5; sun.shadow.camera.right = 5;
+  sun.shadow.camera.top = 5; sun.shadow.camera.bottom = -5;
+  sun.shadow.camera.near = 1; sun.shadow.camera.far = 20;
+  sun.shadow.bias = -0.0004;
+  sun.shadow.radius = 4;
+  scene.add(sun);
+
+  // ---------- Floor ----------
+  function makeFloorTexture() {
+    const c = document.createElement('canvas');
+    c.width = c.height = 256;
+    const g = c.getContext('2d');
+    g.fillStyle = '#ffffff';
+    g.fillRect(0, 0, 256, 256);
+    // subtle concrete noise
+    for (let i = 0; i < 2600; i++) {
+      const v = 225 + Math.random() * 30;
+      g.fillStyle = `rgb(${v},${v},${v})`;
+      g.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+    }
+    g.strokeStyle = 'rgba(0,0,0,0.22)';
+    g.lineWidth = 2;
+    g.strokeRect(0, 0, 256, 256);
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(30, 30);
+    t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    t.encoding = THREE.sRGBEncoding;
+    return t;
+  }
+  const floorTex = makeFloorTexture();
+  const floorMat = new THREE.MeshStandardMaterial({
+    color: 0x33373e, map: floorTex, roughness: 0.42, metalness: 0.1
+  });
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64), floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  // soft contact shadow under the car (ambient occlusion fake)
+  function makeBlobTexture() {
+    const c = document.createElement('canvas');
+    c.width = c.height = 256;
+    const g = c.getContext('2d');
+    const grd = g.createRadialGradient(128, 128, 10, 128, 128, 128);
+    grd.addColorStop(0, 'rgba(0,0,0,0.85)');
+    grd.addColorStop(0.55, 'rgba(0,0,0,0.45)');
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 256, 256);
+    return new THREE.CanvasTexture(c);
+  }
+  const blob = new THREE.Mesh(
+    new THREE.PlaneGeometry(5.6, 2.6),
+    new THREE.MeshBasicMaterial({ map: makeBlobTexture(), transparent: true, depthWrite: false })
+  );
+  blob.rotation.x = -Math.PI / 2;
+  blob.position.y = 0.002;
+  scene.add(blob);
+
+  // ---------- Materials ----------
+  const paint = new THREE.MeshPhysicalMaterial({
+    color: 0x8a0f1d, metalness: 0.55, roughness: 0.32,
+    clearcoat: 1.0, clearcoatRoughness: 0.03, envMapIntensity: 1.0
+  });
+  const roofPaint = paint.clone();
+  roofPaint.clippingPlanes = [new THREE.Plane(new THREE.Vector3(0, 1, 0), -1.355)];
+  const glass = new THREE.MeshPhysicalMaterial({
+    color: 0x0b1118, metalness: 0.2, roughness: 0.04, transparent: true, opacity: 0.42,
+    clearcoat: 1, clearcoatRoughness: 0.0, side: THREE.DoubleSide, envMapIntensity: 1.6, depthWrite: false
+  });
+  const blackPlastic = new THREE.MeshStandardMaterial({ color: 0x0d0e10, roughness: 0.55, metalness: 0.1 });
+  const blackGloss = new THREE.MeshPhysicalMaterial({ color: 0x050506, roughness: 0.15, metalness: 0.3, clearcoat: 1 });
+  const chrome = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.08, metalness: 1.0 });
+  const alloy = new THREE.MeshStandardMaterial({ color: 0xb9bec6, roughness: 0.28, metalness: 1.0 });
+  const darkAlloy = new THREE.MeshStandardMaterial({ color: 0x2a2d32, roughness: 0.4, metalness: 0.9 });
+  const rubber = new THREE.MeshStandardMaterial({ color: 0x141416, roughness: 0.92, metalness: 0 });
+  const brakeDisc = new THREE.MeshStandardMaterial({ color: 0x777b80, roughness: 0.45, metalness: 0.9 });
+  const caliperMat = new THREE.MeshStandardMaterial({ color: 0xc8231c, roughness: 0.4, metalness: 0.2 });
+  const leather = new THREE.MeshStandardMaterial({ color: 0x3b2418, roughness: 0.65 });
+  const headMat = new THREE.MeshStandardMaterial({ color: 0xc9d2dc, emissive: 0xdfeaff, emissiveIntensity: 0.25, roughness: 0.1, metalness: 0.4 });
+  const tailMat = new THREE.MeshStandardMaterial({ color: 0x400004, emissive: 0xff1020, emissiveIntensity: 0.35, roughness: 0.2 });
+  const plateMat = new THREE.MeshStandardMaterial({ color: 0xf2f2ee, roughness: 0.5 });
+
+  // ---------- Car ----------
+  const car = new THREE.Group();
+  const body = new THREE.Group();
+  car.add(body);
+  scene.add(car);
+
+  // ExtrudeGeometry ships flat-shaded facets; average normals across soft edges so the clearcoat reads as one surface
+  function smoothNormals(geo, creaseDeg) {
+    const pos = geo.attributes.position;
+    const n = pos.count, tris = n / 3;
+    const face = new Float32Array(n), unit = new Float32Array(n);
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3();
+    const groups = new Map();
+    const key = i => `${Math.round(pos.getX(i) * 1e4)},${Math.round(pos.getY(i) * 1e4)},${Math.round(pos.getZ(i) * 1e4)}`;
+    for (let t = 0; t < tris; t++) {
+      a.fromBufferAttribute(pos, t * 3); b.fromBufferAttribute(pos, t * 3 + 1); c.fromBufferAttribute(pos, t * 3 + 2);
+      c.sub(b); a.sub(b); c.cross(a);
+      face[t * 3] = c.x; face[t * 3 + 1] = c.y; face[t * 3 + 2] = c.z;
+      const len = c.length() || 1;
+      unit[t * 3] = c.x / len; unit[t * 3 + 1] = c.y / len; unit[t * 3 + 2] = c.z / len;
+      for (let k = 0; k < 3; k++) {
+        const kk = key(t * 3 + k);
+        let g = groups.get(kk);
+        if (!g) groups.set(kk, (g = []));
+        g.push(t);
+      }
+    }
+    const cosLimit = Math.cos(THREE.MathUtils.degToRad(creaseDeg));
+    const normals = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const t = (i / 3) | 0;
+      let x = 0, y = 0, z = 0;
+      for (const s of groups.get(key(i))) {
+        const d = unit[t * 3] * unit[s * 3] + unit[t * 3 + 1] * unit[s * 3 + 1] + unit[t * 3 + 2] * unit[s * 3 + 2];
+        if (d >= cosLimit) { x += face[s * 3]; y += face[s * 3 + 1]; z += face[s * 3 + 2]; }
+      }
+      const len = Math.hypot(x, y, z) || 1;
+      normals[i * 3] = x / len; normals[i * 3 + 1] = y / len; normals[i * 3 + 2] = z / len;
+    }
+    geo.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+  }
+
+  function extrude(shape, width, bevelT, bevelS, mat) {
+    const depth = width - bevelT * 2;
+    const geo = new THREE.ExtrudeGeometry(shape, {
+      depth, bevelEnabled: true, bevelThickness: bevelT, bevelSize: bevelS,
+      bevelSegments: 8, curveSegments: 40, steps: 1
+    });
+    geo.translate(0, 0, -depth / 2);
+    smoothNormals(geo, 48);
+    const m = new THREE.Mesh(geo, mat);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    return m;
+  }
+
+  const REAR_X = -1.35, FRONT_X = 1.42, WHEEL_R = 0.345, ARCH_R = 0.47, WHEEL_Y = WHEEL_R;
+
+  // Lower body side profile (x = length, front is +x)
+  const lower = new THREE.Shape();
+  lower.moveTo(-2.22, 0.32);
+  lower.lineTo(REAR_X - ARCH_R, 0.32);
+  lower.absarc(REAR_X, WHEEL_Y, ARCH_R, Math.PI, 0, true);
+  lower.lineTo(FRONT_X - ARCH_R, 0.30);
+  lower.absarc(FRONT_X, WHEEL_Y, ARCH_R, Math.PI, 0, true);
+  lower.lineTo(2.22, 0.32);
+  lower.quadraticCurveTo(2.36, 0.40, 2.34, 0.54);
+  lower.quadraticCurveTo(2.30, 0.66, 2.08, 0.71);
+  lower.quadraticCurveTo(1.5, 0.82, 0.98, 0.93);
+  lower.quadraticCurveTo(-0.3, 0.97, -1.62, 1.0);
+  lower.quadraticCurveTo(-2.1, 1.0, -2.2, 0.9);
+  lower.quadraticCurveTo(-2.33, 0.74, -2.3, 0.52);
+  lower.quadraticCurveTo(-2.28, 0.36, -2.22, 0.32);
+  body.add(extrude(lower, 1.84, 0.17, 0.06, paint));
+
+  // Greenhouse (glass) + painted roof cut from the same geometry by a clipping plane
+  const cabinShape = new THREE.Shape();
+  cabinShape.moveTo(1.0, 0.92);
+  cabinShape.quadraticCurveTo(0.55, 1.26, 0.12, 1.36);
+  cabinShape.quadraticCurveTo(-0.4, 1.41, -0.92, 1.37);
+  cabinShape.quadraticCurveTo(-1.42, 1.28, -1.72, 0.98);
+  cabinShape.lineTo(1.0, 0.92);
+  const cabin = extrude(cabinShape, 1.46, 0.14, 0.04, glass);
+  cabin.castShadow = false;
+  cabin.renderOrder = 2;
+  body.add(cabin);
+  const roof = new THREE.Mesh(cabin.geometry, roofPaint);
+  roof.scale.set(1.002, 1.003, 1.004);
+  roof.castShadow = true;
+  body.add(roof);
+
+  // Pillars
+  [-1, 1].forEach(s => {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.38, 0.02), blackGloss);
+    p.position.set(-0.4, 1.18, s * 0.735);
+    p.rotation.z = 0.08;
+    body.add(p);
+  });
+
+  // Side skirts & window trim
+  [-1, 1].forEach(s => {
+    const skirt = new THREE.Mesh(new THREE.BoxGeometry(1.75, 0.07, 0.04), blackPlastic);
+    skirt.position.set(0.03, 0.31, s * 0.915);
+    body.add(skirt);
+    const trim = new THREE.Mesh(new THREE.BoxGeometry(2.55, 0.018, 0.02), chrome);
+    trim.position.set(-0.35, 0.985, s * 0.733);
+    body.add(trim);
+    // door handles
+    [0.25, -0.75].forEach(x => {
+      const h = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.025, 0.03), chrome);
+      h.position.set(x, 0.86, s * 0.93);
+      body.add(h);
+    });
+    // mirrors
+    const mirror = new THREE.Group();
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.12), blackGloss);
+    arm.position.set(0, 0, s * 0.06);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.09, 24, 16), paint);
+    cap.scale.set(0.85, 0.6, 1.1);
+    cap.position.set(-0.02, 0.02, s * 0.15);
+    cap.castShadow = true;
+    mirror.add(arm, cap);
+    mirror.position.set(0.82, 1.04, s * 0.72);
+    body.add(mirror);
+    // headlights
+    const housing = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.3), blackGloss);
+    housing.position.set(2.25, 0.69, s * 0.58);
+    housing.rotation.z = -0.6;
+    body.add(housing);
+    const hl = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.016, 0.28), headMat);
+    hl.position.set(2.31, 0.665, s * 0.58);
+    hl.rotation.z = -0.6;
+    body.add(hl);
+    // tail lights
+    const tl = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.08, 0.5), tailMat);
+    tl.position.set(-2.24, 0.82, s * 0.6);
+    tl.rotation.z = -0.5;
+    body.add(tl);
+    // exhaust
+    const ex = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.14, 24, 1, true), chrome);
+    ex.rotation.z = Math.PI / 2;
+    ex.position.set(-2.27, 0.33, s * 0.5);
+    body.add(ex);
+  });
+  // tail light bar
+  const tbar = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.025, 0.7), tailMat);
+  tbar.position.set(-2.285, 0.84, 0);
+  tbar.rotation.z = -0.5;
+  body.add(tbar);
+  // grille & bumpers
+  const grille = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.16, 1.1), blackGloss);
+  grille.position.set(2.3, 0.45, 0);
+  body.add(grille);
+  const splitter = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.03, 1.6), blackPlastic);
+  splitter.position.set(2.24, 0.29, 0);
+  body.add(splitter);
+  const diffuser = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.08, 1.3), blackPlastic);
+  diffuser.position.set(-2.22, 0.32, 0);
+  body.add(diffuser);
+  // license plates
+  const plateF = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.11, 0.52), plateMat);
+  plateF.position.set(2.37, 0.47, 0);
+  body.add(plateF);
+  const plateR = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.11, 0.52), plateMat);
+  plateR.position.set(-2.33, 0.58, 0);
+  plateR.rotation.z = 0.25;
+  body.add(plateR);
+
+  // Interior (seen through glass and from the cockpit camera)
+  const tub = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.02, 1.38), blackPlastic);
+  tub.position.set(-0.35, 1.065, 0);
+  body.add(tub);
+  const dash = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 1.36), blackPlastic);
+  dash.position.set(0.6, 1.1, 0);
+  body.add(dash);
+  const screen = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.2, 0.08),
+    new THREE.MeshStandardMaterial({ color: 0x0a1420, emissive: 0x3c7bd6, emissiveIntensity: 0.6 })
+  );
+  screen.position.set(0.44, 1.2, 0);
+  screen.rotation.y = -Math.PI / 2;
+  screen.rotation.x = 0;
+  body.add(screen);
+  [-0.35, 0.35].forEach(z => {
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.06, 0.46), leather);
+    base.position.set(-0.45, 1.09, z);
+    const back = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.24, 0.44), leather);
+    back.position.set(-0.7, 1.19, z);
+    back.rotation.z = 0.18;
+    body.add(base, back);
+  });
+  const steer = new THREE.Group();
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.018, 12, 40), blackPlastic);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.04, 20), darkAlloy);
+  hub.rotation.x = Math.PI / 2;
+  steer.add(rim, hub);
+  [0, 2.2, -2.2].forEach(a => {
+    const sp = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.02, 0.02), blackPlastic);
+    sp.position.set(Math.cos(a - Math.PI / 2) * 0.08, Math.sin(a - Math.PI / 2) * 0.08, 0);
+    sp.rotation.z = a - Math.PI / 2;
+    steer.add(sp);
+  });
+  steer.position.set(0.3, 1.2, -0.35);
+  steer.rotation.y = Math.PI / 2;
+  steer.rotation.x = -0.35;
+  steer.rotateX(0);
+  body.add(steer);
+
+  // Wheels
+  const tireProfile = [
+    [0.235, -0.125], [0.3, -0.125], [0.33, -0.11], [0.343, -0.07], [0.346, 0],
+    [0.343, 0.07], [0.33, 0.11], [0.3, 0.125], [0.235, 0.125]
+  ].map(([r, y]) => new THREE.Vector2(r, y));
+  const tireGeo = new THREE.LatheGeometry(tireProfile, 64);
+  tireGeo.rotateX(Math.PI / 2);
+  const barrelGeo = new THREE.CylinderGeometry(0.236, 0.236, 0.24, 48, 1, true);
+  barrelGeo.rotateX(Math.PI / 2);
+  const lipGeo = new THREE.TorusGeometry(0.228, 0.012, 10, 48);
+  const spokeGeo = new THREE.BoxGeometry(0.2, 0.042, 0.03);
+  spokeGeo.translate(0.115, 0, 0);
+  const hubGeo = new THREE.CylinderGeometry(0.055, 0.06, 0.05, 24);
+  hubGeo.rotateX(Math.PI / 2);
+  const discGeo = new THREE.CylinderGeometry(0.175, 0.175, 0.025, 40);
+  discGeo.rotateX(Math.PI / 2);
+  const innerGeo = new THREE.CircleGeometry(0.235, 40);
+
+  const wheels = [];
+  function makeWheel(x, side) {
+    const g = new THREE.Group();
+    g.position.set(x, WHEEL_Y, side * 0.79);
+    const spin = new THREE.Group();
+    const tire = new THREE.Mesh(tireGeo, rubber);
+    tire.castShadow = true;
+    const barrel = new THREE.Mesh(barrelGeo, darkAlloy);
+    barrel.material.side = THREE.DoubleSide;
+    const lip = new THREE.Mesh(lipGeo, chrome);
+    lip.position.z = side * 0.1;
+    const inner = new THREE.Mesh(innerGeo, blackPlastic);
+    inner.position.z = -side * 0.06;
+    if (side < 0) inner.rotation.y = Math.PI;
+    spin.add(tire, barrel, lip, inner);
+    for (let i = 0; i < 10; i++) {
+      const s = new THREE.Mesh(spokeGeo, alloy);
+      s.rotation.z = (i / 10) * Math.PI * 2 + (i % 2 ? 0.12 : 0);
+      s.position.z = side * 0.085;
+      s.castShadow = true;
+      spin.add(s);
+    }
+    const h = new THREE.Mesh(hubGeo, alloy);
+    h.position.z = side * 0.09;
+    spin.add(h);
+    const disc = new THREE.Mesh(discGeo, brakeDisc);
+    disc.position.z = side * 0.02;
+    spin.add(disc);
+    g.add(spin);
+    const caliper = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.06), caliperMat);
+    caliper.position.set(-0.1, 0.12, side * 0.045);
+    caliper.rotation.z = 0.7;
+    g.add(caliper);
+    car.add(g);
+    wheels.push({ group: g, spin, front: x > 0 });
+  }
+  [REAR_X, FRONT_X].forEach(x => [-1, 1].forEach(s => makeWheel(x, s)));
+
+  // Headlight beams (night)
+  const beams = [];
+  [-1, 1].forEach(s => {
+    const spot = new THREE.SpotLight(0xfff3dd, 0, 22, 0.45, 0.6, 1.2);
+    spot.position.set(2.3, 0.7, s * 0.58);
+    spot.target.position.set(10, 0, s * 1.2);
+    car.add(spot, spot.target);
+    beams.push(spot);
+  });
+  const tailGlow = new THREE.PointLight(0xff1a1a, 0, 3, 2);
+  tailGlow.position.set(-2.6, 0.75, 0);
+  car.add(tailGlow);
+
+  // ---------- Paint swatches ----------
+  const PAINTS = [
+    { name: 'Вишневий металік', hex: 0x8a0f1d, metal: 0.55, rough: 0.32 },
+    { name: 'Графіт', hex: 0x2b2f36, metal: 0.7, rough: 0.3 },
+    { name: 'Глибокий синій', hex: 0x173f78, metal: 0.6, rough: 0.3 },
+    { name: 'Перламутр', hex: 0xe9e6df, metal: 0.25, rough: 0.25 },
+    { name: 'Смарагд', hex: 0x0d5643, metal: 0.6, rough: 0.3 },
+    { name: 'Гірчиця', hex: 0xc4921b, metal: 0.5, rough: 0.34 },
+    { name: 'Чорний матовий', hex: 0x111214, metal: 0.2, rough: 0.7, matte: true }
+  ];
+  const swWrap = document.getElementById('swatches');
+  const swName = document.getElementById('swatchName');
+  function applyPaint(p) {
+    [paint, roofPaint].forEach(m => {
+      m.color.setHex(p.hex);
+      m.metalness = p.metal;
+      m.roughness = p.rough;
+      m.clearcoat = p.matte ? 0 : 1;
+    });
+    swName.textContent = p.name;
+    swWrap.querySelectorAll('.swatch').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.name === p.name)));
+  }
+  PAINTS.forEach(p => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'swatch';
+    b.dataset.name = p.name;
+    b.title = p.name;
+    b.setAttribute('aria-label', p.name);
+    b.style.background = '#' + p.hex.toString(16).padStart(6, '0');
+    b.addEventListener('click', () => applyPaint(p));
+    swWrap.appendChild(b);
+  });
+  applyPaint(PAINTS[0]);
+
+  // ---------- Scene toggles ----------
+  const state = { night: false, lights: false, drive: false };
+  const tNight = document.getElementById('tNight');
+  const tLights = document.getElementById('tLights');
+  const tDrive = document.getElementById('tDrive');
+  function applyScene() {
+    tNight.setAttribute('aria-pressed', String(state.night));
+    tLights.setAttribute('aria-pressed', String(state.lights));
+    tDrive.setAttribute('aria-pressed', String(state.drive));
+    const bg = state.night ? 0x05070b : 0x7c8592;
+    scene.background = new THREE.Color(bg);
+    scene.fog = new THREE.Fog(bg, 14, 34);
+    sun.intensity = state.night ? 0.08 : 1.6;
+    hemi.intensity = state.night ? 0.05 : 0.35;
+    scene.environment = state.night ? nightEnv : dayEnv;
+    floorMat.color.setHex(state.night ? 0x1d2025 : 0x2a2e34);
+    renderer.toneMappingExposure = state.night ? 0.9 : 0.8;
+    const on = state.lights || state.night;
+    beams.forEach(b => (b.intensity = on ? 4 : 0));
+    headMat.emissiveIntensity = on ? 3.2 : 0.25;
+    tailMat.emissiveIntensity = on ? 2.2 : 0.35;
+    tailGlow.intensity = on ? 1.2 : 0;
+  }
+  const dayEnv = scene.environment;
+  const nightEnv = (() => {
+    const rs = new THREE.RoomEnvironment();
+    rs.traverse(o => {
+      if (o.material) {
+        o.material = o.material.clone();
+        if (o.material.color) o.material.color.multiplyScalar(0.12);
+        if (o.material.emissive) o.material.emissive.multiplyScalar(0.12);
+      }
+    });
+    return pmrem.fromScene(rs, 0.04).texture;
+  })();
+  tNight.addEventListener('click', () => { state.night = !state.night; applyScene(); });
+  tLights.addEventListener('click', () => { state.lights = !state.lights; applyScene(); });
+  tDrive.addEventListener('click', () => { state.drive = !state.drive; applyScene(); });
+  applyScene();
+
+  // ---------- Cameras ----------
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const CAMS = [
+    { id: 'free', name: 'Вільна', note: 'тягніть мишкою, щоб обертати', orbit: true },
+    { id: 'front', name: 'Спереду', note: 'три чверті, класика каталогу', pos: V(5.0, 1.15, 2.6), target: V(0, 0.55, 0), orbit: true },
+    { id: 'side', name: 'Профіль', note: 'як на фото в оголошенні', pos: V(0.1, 0.95, 7.2), target: V(0, 0.6, 0), orbit: true },
+    { id: 'rear', name: 'Ззаду', note: 'те, що бачать інші на трасі', pos: V(-5.4, 1.5, -2.4), target: V(0, 0.6, 0), orbit: true },
+    { id: 'top', name: 'Згори', note: 'погляд дрона', pos: V(0.01, 9.5, 0.01), target: V(0, 0, 0), orbit: true },
+    { id: 'wheel', name: 'Колесо', note: 'диски, гальма, гордість', pos: V(2.35, 0.42, 2.05), target: V(FRONT_X, 0.34, 0.8), orbit: true },
+    { id: 'cockpit', name: 'Салон', note: 'пристебніться · тягніть, щоб роззирнутися', pos: V(-0.5, 1.28, -0.35), target: V(-0.4, 1.27, -0.35), orbit: true, interior: true },
+    { id: 'chase', name: 'Погоня', note: 'камера їде за авто', dynamic: true, drive: true },
+    { id: 'cine', name: 'Кіно', note: 'автоматичний проліт', dynamic: true }
+  ];
+  const camsEl = document.getElementById('cams');
+  const camName = document.getElementById('camName');
+  const camNote = document.getElementById('camNote');
+  CAMS.forEach((c, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cam';
+    b.dataset.id = c.id;
+    b.innerHTML = `<span>${c.name}</span><kbd>${i + 1}</kbd>`;
+    b.addEventListener('click', () => setCam(c.id));
+    camsEl.appendChild(b);
+  });
+
+  let current = CAMS[0];
+  let tween = null;
+  const tmpPos = new THREE.Vector3(), tmpTarget = new THREE.Vector3();
+  const look = new THREE.Vector3(0, 0.6, 0);
+
+  function configureControls(c) {
+    if (c.interior) {
+      controls.minDistance = 0.05; controls.maxDistance = 0.2;
+      controls.enableZoom = false; controls.rotateSpeed = -0.35;
+      controls.minPolarAngle = Math.PI * 0.3; controls.maxPolarAngle = Math.PI * 0.62;
+    } else {
+      controls.minDistance = 2.2; controls.maxDistance = 16;
+      controls.enableZoom = true; controls.rotateSpeed = 0.8;
+      controls.minPolarAngle = 0; controls.maxPolarAngle = Math.PI / 2 - 0.04;
+    }
+    controls.enablePan = false;
+  }
+
+  function dynamicPose(c, t, outPos, outTarget) {
+    if (c.id === 'chase') {
+      const sway = Math.sin(t * 0.6) * 0.5;
+      const back = camera.aspect < 1 ? 9.5 : 6.4;
+      outPos.set(-back, 1.9 + Math.sin(t * 1.3) * 0.05, sway);
+      outTarget.set(1.5, 0.75, sway * 0.3);
+    } else {
+      const a = t * 0.18;
+      const r = (6.2 + Math.sin(t * 0.31) * 1.4) * (camera.aspect < 1 ? 1.5 : 1);
+      outPos.set(Math.cos(a) * r, 0.7 + (Math.sin(t * 0.23) + 1) * 0.9, Math.sin(a) * r);
+      outTarget.set(0, 0.55, 0);
+    }
+  }
+
+  function setCam(id) {
+    const c = CAMS.find(x => x.id === id);
+    if (!c) return;
+    const prev = current;
+    current = c;
+    camsEl.querySelectorAll('.cam').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
+    camName.textContent = c.name;
+    camNote.textContent = c.note;
+    if (c.drive && !state.drive) { state.drive = true; applyScene(); }
+    if (prev.drive && !c.drive && state.drive) { state.drive = false; applyScene(); }
+    configureControls(c);
+    if (c.id === 'free') {
+      const fromTarget = controls.target.clone();
+      if (prev.interior || prev.dynamic) {
+        tween = { fromPos: camera.position.clone(), fromTarget, toPos: V(5.5, 1.8, 4.5), toTarget: V(0, 0.6, 0), t0: performance.now(), dur: 1300 };
+      } else {
+        tween = { fromPos: camera.position.clone(), fromTarget, toPos: camera.position.clone(), toTarget: V(0, 0.6, 0), t0: performance.now(), dur: 500 };
+      }
+    } else {
+      // portrait screens are narrow: back the camera off so the whole car fits
+      const toPos = c.pos ? c.pos.clone() : null;
+      if (toPos && camera.aspect < 1 && !c.interior && c.id !== 'wheel') toPos.sub(c.target).multiplyScalar(1.6).add(c.target);
+      tween = { fromPos: camera.position.clone(), fromTarget: controls.target.clone(), toPos, toTarget: c.target, t0: performance.now(), dur: reduceMotion ? 1 : 1400 };
+    }
+    controls.enabled = false;
+  }
+
+  const ease = k => (k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2);
+
+  window.addEventListener('keydown', e => {
+    if (e.target.closest && e.target.closest('input, textarea')) return;
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= CAMS.length) setCam(CAMS[n - 1].id);
+  });
+
+  // ---------- Resize ----------
+  function resize() {
+    const w = window.innerWidth, h = window.innerHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h;
+    camera.fov = w < h ? 55 : 40;
+    camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // ---------- Loop ----------
+  const clock = new THREE.Clock();
+  let elapsed = 0, roll = 0;
+  setCam('free');
+  tween = null;
+  if (camera.aspect < 1) camera.position.multiplyScalar(1.6);
+  controls.enabled = true;
+
+  function frame() {
+    const dt = Math.min(clock.getDelta(), 0.05);
+    elapsed += dt;
+
+    // driving: wheels roll, floor flows, body breathes on the suspension
+    const speed = state.drive ? 16 : 0; // m/s
+    const dist = speed * dt;
+    roll -= dist / WHEEL_R;
+    wheels.forEach(w => (w.spin.rotation.z = roll));
+    floorTex.offset.x += dist * 0.5;
+    body.position.y = state.drive ? Math.sin(elapsed * 9) * 0.006 + Math.sin(elapsed * 2.3) * 0.004 : 0;
+    body.rotation.x = state.drive ? Math.sin(elapsed * 1.7) * 0.004 : 0;
+
+    if (tween) {
+      const k = Math.min((performance.now() - tween.t0) / tween.dur, 1);
+      const e = ease(k);
+      let toPos = tween.toPos, toTarget = tween.toTarget;
+      if (current.dynamic) {
+        dynamicPose(current, elapsed, tmpPos, tmpTarget);
+        toPos = tmpPos; toTarget = tmpTarget;
+      }
+      camera.position.lerpVectors(tween.fromPos, toPos, e);
+      look.lerpVectors(tween.fromTarget, toTarget, e);
+      camera.lookAt(look);
+      if (k >= 1) {
+        tween = null;
+        controls.target.copy(look);
+        if (current.orbit) controls.enabled = true;
+      }
+    } else if (current.dynamic) {
+      dynamicPose(current, elapsed, tmpPos, tmpTarget);
+      camera.position.copy(tmpPos);
+      camera.lookAt(tmpTarget);
+      controls.target.copy(tmpTarget);
+    } else {
+      controls.update();
+    }
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  document.getElementById('loading').classList.add('done');
+})();
+</script>
